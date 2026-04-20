@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1;paymentv1";
+
+import "google/protobuf/timestamp.proto";
+
+// PaymentService обрабатывает оплату заказов
+service PaymentService {
+  // PayOrder обрабатывает оплату заказа
+  rpc PayOrder(PayOrderRequest) returns (PayOrderResponse);
+}
+
+// Способ оплаты
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0; // Не указан
+  PAYMENT_METHOD_CARD = 1; // Банковская карта
+  PAYMENT_METHOD_SBP = 2; // Система быстрых платежей
+  PAYMENT_METHOD_CREDIT_CARD = 3; // Кредитная карта
+  PAYMENT_METHOD_INVESTOR_MONEY = 4; // Деньги инвестора
+}
+
+// Запрос на оплату заказа
+message PayOrderRequest {
+  // UUID заказа (обязательный)
+  string order_uuid = 1;
+
+  // Выбранный способ оплаты (обязательный)
+  PaymentMethod payment_method = 2;
+}
+
+// Ответ на запрос оплаты заказа
+message PayOrderResponse {
+  // UUID транзакции оплаты
+  string transaction_uuid = 1;
+}
