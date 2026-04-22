@@ -13,7 +13,9 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	svc "github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/service"
+	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/v1"
+	inventoryRepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/inventory"
+	inventoryService "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/inventory"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -52,7 +54,12 @@ func main() {
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
 	)
-	inventoryv1.RegisterInventoryServiceServer(grpcServer, svc.NewInventoryServer())
+
+	repo := inventoryRepo.NewRepository()
+	service := inventoryService.NewService(repo)
+	api := apiv1.NewAPI(service)
+
+	inventoryv1.RegisterInventoryServiceServer(grpcServer, api)
 
 	// Включаем reflection для postman/grpcurl
 	reflection.Register(grpcServer)

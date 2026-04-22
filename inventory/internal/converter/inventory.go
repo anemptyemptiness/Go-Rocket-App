@@ -1,0 +1,57 @@
+package converter
+
+import (
+	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
+)
+
+func PartModelToProto(part model.Part) *inventoryv1.Part {
+	return &inventoryv1.Part{
+		Uuid:          part.UUID,
+		Name:          part.Name,
+		Description:   part.Description,
+		Price:         part.Price,
+		PartType:      inventoryv1.PartType(part.PartType),
+		StockQuantity: part.StockQuantity,
+		CreatedAt:     timestamppb.New(part.CreatedAt),
+	}
+}
+
+func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (model.ListPartsRequest, error) {
+	uuids := make([]uuid.UUID, 0, len(req.GetUuids()))
+
+	for _, uuidStr := range req.GetUuids() {
+		parsedUUID, err := uuid.Parse(uuidStr)
+		if err != nil {
+			return model.ListPartsRequest{}, err
+		}
+
+		uuids = append(uuids, parsedUUID)
+	}
+
+	return model.ListPartsRequest{
+		UUIDs:    uuids,
+		PartType: model.PartType(req.GetPartType()),
+	}, nil
+}
+
+func PartsModelToProto(parts []model.Part) []*inventoryv1.Part {
+	protoParts := make([]*inventoryv1.Part, 0, len(parts))
+
+	for _, part := range parts {
+		protoParts = append(protoParts, &inventoryv1.Part{
+			Uuid:          part.UUID,
+			Name:          part.Name,
+			Description:   part.Description,
+			Price:         part.Price,
+			PartType:      inventoryv1.PartType(part.PartType),
+			StockQuantity: part.StockQuantity,
+			CreatedAt:     timestamppb.New(part.CreatedAt),
+		})
+	}
+
+	return protoParts
+}
