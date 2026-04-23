@@ -13,7 +13,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	svc "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/service"
+	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
@@ -52,7 +53,11 @@ func main() {
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
 	)
-	paymentv1.RegisterPaymentServiceServer(grpcServer, &svc.PaymentServer{})
+
+	paymentService := payment.NewService()
+	api := apiv1.NewAPI(paymentService)
+
+	paymentv1.RegisterPaymentServiceServer(grpcServer, api)
 
 	// Включаем reflection для postman/grpcurl
 	reflection.Register(grpcServer)
