@@ -21,10 +21,13 @@ func (a *api) GetOrder(ctx context.Context, params orderv1.GetOrderParams) (orde
 		case errors.Is(err, orderErrors.ErrOrderNotFound):
 			return &orderv1.GetOrderNotFound{
 				Code:    http.StatusNotFound,
-				Message: orderErrors.ErrOrderNotFound.Error(),
+				Message: err.Error(),
 			}, nil
 		default:
-			return nil, fmt.Errorf("получить заказ: %w", err)
+			return &orderv1.GetOrderInternalServerError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
 		}
 	}
 
@@ -38,17 +41,22 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 		case errors.Is(err, orderErrors.ErrHullUUIDAndEngineUUIDAreRequired):
 			return &orderv1.CreateOrderBadRequest{
 				Code:    http.StatusBadRequest,
-				Message: orderErrors.ErrHullUUIDAndEngineUUIDAreRequired.Error(),
+				Message: err.Error(),
 			}, nil
 		case errors.Is(err, orderErrors.ErrShieldUUIDIncorrect):
 			return &orderv1.CreateOrderBadRequest{
 				Code:    http.StatusBadRequest,
-				Message: orderErrors.ErrShieldUUIDIncorrect.Error(),
+				Message: err.Error(),
 			}, nil
 		case errors.Is(err, orderErrors.ErrWeaponUUIDIncorrect):
 			return &orderv1.CreateOrderBadRequest{
 				Code:    http.StatusBadRequest,
-				Message: orderErrors.ErrWeaponUUIDIncorrect.Error(),
+				Message: err.Error(),
+			}, nil
+		case errors.Is(err, orderErrors.ErrEmptyRequest):
+			return &orderv1.CreateOrderBadRequest{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
 			}, nil
 		default:
 			return nil, fmt.Errorf("создать заказ: %w", err)
@@ -68,6 +76,11 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 			case codes.InvalidArgument:
 				return &orderv1.CreateOrderBadRequest{
 					Code:    http.StatusBadRequest,
+					Message: err.Error(),
+				}, nil
+			case codes.Internal:
+				return &orderv1.CreateOrderInternalServerError{
+					Code:    http.StatusInternalServerError,
 					Message: err.Error(),
 				}, nil
 			}
@@ -96,10 +109,18 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params orderv1.PayOrderParams) (orderv1.PayOrderRes, error) {
 	payOrderRequestModel, err := converter.PayOrderRequestToModel(req)
 	if err != nil {
-		return &orderv1.PayOrderInternalServerError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
-		}, nil
+		switch {
+		case errors.Is(err, orderErrors.ErrEmptyRequest):
+			return &orderv1.PayOrderBadRequest{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}, nil
+		default:
+			return &orderv1.PayOrderInternalServerError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}, nil
+		}
 	}
 
 	respModel, err := a.orderService.PayOrder(ctx, payOrderRequestModel, params.OrderUUID)
