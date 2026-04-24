@@ -34,7 +34,7 @@ func (r *repository) ListParts(_ context.Context, req model.ListPartsRequest) ([
 		for _, UUID := range req.UUIDs {
 			part, ok := r.parts[UUID]
 			if !ok {
-				return nil, errs.ErrPartNotFound
+				return nil, errs.NewErrPartNotFound(UUID)
 			}
 
 			parts = append(parts, part)

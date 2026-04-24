@@ -26,14 +26,14 @@ func NewErrPartIsOver(partName string) error {
 	return fmt.Errorf("%w: %s", ErrPartIsOver, partName)
 }
 
-func NewPaymentClientInvalidArgument(description string) error {
+func NewErrPaymentClientInvalidArgument(description string) error {
 	return fmt.Errorf("%w: %s", ErrPaymentClientInvalidArgument, description)
 }
 
-func NewPaymentClientInternal(description string) error {
+func NewErrPaymentClientInternal(description string) error {
 	return fmt.Errorf("%w: %s", ErrPaymentClientInternal, description)
 }
 
-func NewInventoryClientInternal(description string) error {
+func NewErrInventoryClientInternal(description string) error {
 	return fmt.Errorf("%w: %s", ErrInventoryClientInternal, description)
 }

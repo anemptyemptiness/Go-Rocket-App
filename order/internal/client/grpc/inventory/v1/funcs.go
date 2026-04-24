@@ -19,7 +19,7 @@ func (c *client) ListParts(ctx context.Context, req model.ListPartsClientRequest
 		Uuids: uuidsStr,
 	})
 	if err != nil {
-		return model.ListPartsClientResponse{}, errs.NewInventoryClientInternal(err.Error())
+		return model.ListPartsClientResponse{}, errs.NewErrInventoryClientInternal(err.Error())
 	}
 
 	return clientConverter.ListPartsClientResponseProtoToModel(resp)

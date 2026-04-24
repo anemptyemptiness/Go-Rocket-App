@@ -2,12 +2,14 @@ package v1
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/converter"
+	inventoryErrors "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -23,7 +25,12 @@ func (a *api) GetPart(ctx context.Context, req *inventoryv1.GetPartRequest) (*in
 
 	part, err := a.inventoryService.GetPart(ctx, partUUID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "ошибка получения детали: %v", err)
+		switch {
+		case errors.Is(err, inventoryErrors.ErrPartNotFound):
+			return nil, status.Errorf(codes.NotFound, "получить деталь: %v", err)
+		default:
+			return nil, status.Errorf(codes.Internal, "ошибка получения детали: %v", err)
+		}
 	}
 
 	return &inventoryv1.GetPartResponse{
@@ -34,12 +41,24 @@ func (a *api) GetPart(ctx context.Context, req *inventoryv1.GetPartRequest) (*in
 func (a *api) ListParts(ctx context.Context, req *inventoryv1.ListPartsRequest) (*inventoryv1.ListPartsResponse, error) {
 	modelReq, err := converter.ListPartsRequestProtoToModel(req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "ошибка конвертации запроса: %v", err)
+		switch {
+		case errors.Is(err, inventoryErrors.ErrIncorrectPartUUID):
+			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в модель: %v", err)
+		case errors.Is(err, inventoryErrors.ErrEmptyRequest):
+			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в модель: %v", err)
+		default:
+			return nil, status.Errorf(codes.Internal, "конвертация запроса в модель: %v", err)
+		}
 	}
 
 	parts, err := a.inventoryService.ListParts(ctx, modelReq)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "ошибка получения списка деталей: %v", err)
+		switch {
+		case errors.Is(err, inventoryErrors.ErrPartNotFound):
+			return nil, status.Errorf(codes.NotFound, "получить список деталей: %v", err)
+		default:
+			return nil, status.Errorf(codes.Internal, "получить список деталей: %v", err)
+		}
 	}
 
 	return &inventoryv1.ListPartsResponse{
