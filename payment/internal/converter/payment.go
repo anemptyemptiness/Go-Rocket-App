@@ -13,6 +13,14 @@ func PayOrderRequestProtoToModel(req *paymentv1.PayOrderRequest) (model.PayOrder
 		return model.PayOrderRequest{}, errs.ErrEmptyRequest
 	}
 
+	if req.GetOrderUuid() == "" {
+		return model.PayOrderRequest{}, errs.ErrOrderUUIDIsEmpty
+	}
+
+	if req.GetPaymentMethod() == paymentv1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED {
+		return model.PayOrderRequest{}, errs.ErrPaymentMethodUnspecified
+	}
+
 	orderUUID, err := uuid.Parse(req.GetOrderUuid())
 	if err != nil {
 		return model.PayOrderRequest{}, err
