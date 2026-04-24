@@ -20,9 +20,9 @@ func (c *client) PayOrder(ctx context.Context, req model.PayOrderClientRequest) 
 	if err != nil {
 		switch status.Code(err) {
 		case codes.InvalidArgument:
-			return model.PayOrderClientResponse{}, errs.NewErrPaymentClientInvalidArgument(err.Error())
+			return model.PayOrderClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrPaymentClientInvalidArgument, err.Error())
 		default:
-			return model.PayOrderClientResponse{}, errs.NewErrPaymentClientInternal(err.Error())
+			return model.PayOrderClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrPaymentClientInternal, err.Error())
 		}
 	}
 

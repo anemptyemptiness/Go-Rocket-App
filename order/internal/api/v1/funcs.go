@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/converter"
 	orderErrors "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
@@ -65,31 +62,25 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 
 	respModel, err := a.orderService.CreateOrder(ctx, reqModel)
 	if err != nil {
-		st, ok := status.FromError(err)
-		if ok {
-			switch st.Code() {
-			case codes.NotFound:
-				return &orderv1.CreateOrderNotFound{
-					Code:    http.StatusNotFound,
-					Message: err.Error(),
-				}, nil
-			case codes.InvalidArgument:
-				return &orderv1.CreateOrderBadRequest{
-					Code:    http.StatusBadRequest,
-					Message: err.Error(),
-				}, nil
-			case codes.Internal:
-				return &orderv1.CreateOrderInternalServerError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				}, nil
-			}
-		}
-
 		switch {
 		case errors.Is(err, orderErrors.ErrPartIsOver):
 			return &orderv1.CreateOrderConflict{
 				Code:    http.StatusConflict,
+				Message: err.Error(),
+			}, nil
+		case errors.Is(err, orderErrors.ErrInventoryClientNotFound):
+			return &orderv1.CreateOrderNotFound{
+				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}, nil
+		case errors.Is(err, orderErrors.ErrInventoryClientInvalidArgument):
+			return &orderv1.CreateOrderBadRequest{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}, nil
+		case errors.Is(err, orderErrors.ErrInventoryClientInternal):
+			return &orderv1.CreateOrderInternalServerError{
+				Code:    http.StatusInternalServerError,
 				Message: err.Error(),
 			}, nil
 		default:
@@ -115,6 +106,11 @@ func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params
 				Code:    http.StatusBadRequest,
 				Message: err.Error(),
 			}, nil
+		case errors.Is(err, orderErrors.ErrUnknownPaymentMethod):
+			return &orderv1.PayOrderBadRequest{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}, nil
 		default:
 			return &orderv1.PayOrderInternalServerError{
 				Code:    http.StatusInternalServerError,
@@ -134,6 +130,16 @@ func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params
 		case errors.Is(err, orderErrors.ErrOrderNotFound):
 			return &orderv1.PayOrderNotFound{
 				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}, nil
+		case errors.Is(err, orderErrors.ErrPaymentClientInvalidArgument):
+			return &orderv1.PayOrderBadRequest{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}, nil
+		case errors.Is(err, orderErrors.ErrPaymentClientInternal):
+			return &orderv1.PayOrderInternalServerError{
+				Code:    http.StatusInternalServerError,
 				Message: err.Error(),
 			}, nil
 		default:

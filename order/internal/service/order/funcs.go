@@ -41,7 +41,7 @@ func (s *service) CreateOrder(ctx context.Context, req model.CreateOrderRequest)
 	var totalPrice int64
 	for _, part := range resp.Parts {
 		if part.StockQuantity <= 0 {
-			return model.CreateOrderResponse{}, errs.NewErrPartIsOver(part.Name)
+			return model.CreateOrderResponse{}, errs.NewExternalErrWithDescription(errs.ErrPartIsOver, part.Name)
 		}
 		totalPrice += part.Price
 	}

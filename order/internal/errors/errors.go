@@ -17,23 +17,15 @@ var (
 	ErrOrderStatusIncorrect             = errors.New("некорректный статус заказа")
 	ErrOrderAlreadyPaid                 = errors.New("заказ уже оплачен")
 	ErrOrderAlreadyCancelled            = errors.New("заказ уже отменён")
-	ErrPaymentClientInvalidArgument     = errors.New("некорректный параметр")
-	ErrPaymentClientInternal            = errors.New("внутренняя ошибка")
-	ErrInventoryClientInternal          = errors.New("внутренняя ошибка")
+
+	ErrPaymentClientInvalidArgument = errors.New("некорректный параметр")
+	ErrPaymentClientInternal        = errors.New("внутренняя ошибка")
+
+	ErrInventoryClientInvalidArgument = errors.New("некорректный параметр")
+	ErrInventoryClientNotFound        = errors.New("элемент не найден")
+	ErrInventoryClientInternal        = errors.New("внутренняя ошибка")
 )
 
-func NewErrPartIsOver(partName string) error {
-	return fmt.Errorf("%w: %s", ErrPartIsOver, partName)
-}
-
-func NewErrPaymentClientInvalidArgument(description string) error {
-	return fmt.Errorf("%w: %s", ErrPaymentClientInvalidArgument, description)
-}
-
-func NewErrPaymentClientInternal(description string) error {
-	return fmt.Errorf("%w: %s", ErrPaymentClientInternal, description)
-}
-
-func NewErrInventoryClientInternal(description string) error {
-	return fmt.Errorf("%w: %s", ErrInventoryClientInternal, description)
+func NewExternalErrWithDescription(err error, description string) error {
+	return fmt.Errorf("%w: %s", err, description)
 }

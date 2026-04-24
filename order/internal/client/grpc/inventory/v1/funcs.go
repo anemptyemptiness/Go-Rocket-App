@@ -3,6 +3,9 @@ package v1
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	clientConverter "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1/converter"
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
@@ -19,7 +22,14 @@ func (c *client) ListParts(ctx context.Context, req model.ListPartsClientRequest
 		Uuids: uuidsStr,
 	})
 	if err != nil {
-		return model.ListPartsClientResponse{}, errs.NewErrInventoryClientInternal(err.Error())
+		switch status.Code(err) {
+		case codes.NotFound:
+			return model.ListPartsClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrInventoryClientNotFound, err.Error())
+		case codes.InvalidArgument:
+			return model.ListPartsClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrInventoryClientInvalidArgument, err.Error())
+		default:
+			return model.ListPartsClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrInventoryClientInternal, err.Error())
+		}
 	}
 
 	return clientConverter.ListPartsClientResponseProtoToModel(resp)

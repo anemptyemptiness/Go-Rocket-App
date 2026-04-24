@@ -6,9 +6,10 @@ import (
 )
 
 func OrderRecordToModel(order record.Order) model.Order {
-	paymentMethod := model.PaymentMethodStringUnspecified
+	var paymentMethod *model.PaymentMethodString
 	if order.PaymentMethod != nil {
-		paymentMethod = model.PaymentMethodString(*order.PaymentMethod)
+		value := model.PaymentMethodString(*order.PaymentMethod)
+		paymentMethod = &value
 	}
 
 	return model.Order{
@@ -19,16 +20,17 @@ func OrderRecordToModel(order record.Order) model.Order {
 		WeaponUUID:      order.WeaponUUID,
 		TotalPrice:      order.TotalPrice,
 		TransactionUUID: order.TransactionUUID,
-		PaymentMethod:   &paymentMethod,
+		PaymentMethod:   paymentMethod,
 		Status:          model.OrderStatus(order.Status),
 		CreatedAt:       order.CreatedAt,
 	}
 }
 
 func OrderModelToRecord(order model.Order) record.Order {
-	paymentMethod := record.PaymentMethodUnspecified
+	var paymentMethod *record.PaymentMethod
 	if order.PaymentMethod != nil {
-		paymentMethod = record.PaymentMethod(*order.PaymentMethod)
+		value := record.PaymentMethod(*order.PaymentMethod)
+		paymentMethod = &value
 	}
 
 	return record.Order{
@@ -39,7 +41,7 @@ func OrderModelToRecord(order model.Order) record.Order {
 		WeaponUUID:      order.WeaponUUID,
 		TotalPrice:      order.TotalPrice,
 		TransactionUUID: order.TransactionUUID,
-		PaymentMethod:   &paymentMethod,
+		PaymentMethod:   paymentMethod,
 		Status:          record.OrderStatus(order.Status),
 		CreatedAt:       order.CreatedAt,
 	}
