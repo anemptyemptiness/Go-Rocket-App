@@ -23,7 +23,7 @@ func PayOrderRequestProtoToModel(req *paymentv1.PayOrderRequest) (model.PayOrder
 
 	orderUUID, err := uuid.Parse(req.GetOrderUuid())
 	if err != nil {
-		return model.PayOrderRequest{}, err
+		return model.PayOrderRequest{}, errs.ErrIncorrectOrderUUID
 	}
 
 	return model.PayOrderRequest{

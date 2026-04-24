@@ -17,11 +17,15 @@ func (a *api) PayOrder(ctx context.Context, req *paymentv1.PayOrderRequest) (*pa
 	if err != nil {
 		switch {
 		case errors.Is(err, paymentErrors.ErrOrderUUIDIsEmpty):
-			return nil, status.Errorf(codes.InvalidArgument, "ошибка валидации запроса: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
+		case errors.Is(err, paymentErrors.ErrIncorrectOrderUUID):
+			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
 		case errors.Is(err, paymentErrors.ErrPaymentMethodUnspecified):
-			return nil, status.Errorf(codes.InvalidArgument, "ошибка валидации запроса: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
+		case errors.Is(err, paymentErrors.ErrEmptyRequest):
+			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
 		default:
-			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
+			return nil, status.Errorf(codes.Internal, "конвертация запроса в  модель: %v", err)
 		}
 	}
 
