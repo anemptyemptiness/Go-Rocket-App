@@ -5,15 +5,30 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	paymentapi "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1"
+	paymentsvc "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
 // PaymentServer реализует gRPC сервис оплаты.
 type PaymentServer struct {
 	paymentv1.UnimplementedPaymentServiceServer
+}
+
+func RegisterServices(grpcServer *grpc.Server) {
+	svc := paymentsvc.New()
+	api := paymentapi.New(svc)
+	paymentv1.RegisterPaymentServiceServer(grpcServer, api)
+}
+
+func Interceptors() []grpc.ServerOption {
+	opts := make([]grpc.ServerOption, 0)
+
+	return opts
 }
 
 // PayOrder обрабатывает оплату заказа.

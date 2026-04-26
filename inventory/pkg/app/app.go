@@ -5,10 +5,14 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
+	partrepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
+	partsvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -100,6 +104,19 @@ func NewInventoryServer() *InventoryServer {
 			},
 		},
 	}
+}
+
+func RegisterServices(grpcServer *grpc.Server) {
+	repo := partrepo.New()
+	svc := partsvc.New(repo)
+	api := inventoryapi.New(svc)
+	inventoryv1.RegisterInventoryServiceServer(grpcServer, api)
+}
+
+func Interceptors() []grpc.ServerOption {
+	opts := make([]grpc.ServerOption, 0)
+
+	return opts
 }
 
 // GetPart возвращает деталь по UUID.

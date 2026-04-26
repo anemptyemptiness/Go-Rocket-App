@@ -10,7 +10,7 @@ type client struct {
 	inventoryClient inventoryv1.InventoryServiceClient
 }
 
-func NewClient(conn *grpc.ClientConn) *client {
+func New(conn *grpc.ClientConn) *client {
 	inventoryClient := inventoryv1.NewInventoryServiceClient(conn)
 
 	return &client{

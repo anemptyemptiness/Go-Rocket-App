@@ -54,8 +54,8 @@ func main() {
 		}),
 	)
 
-	paymentService := payment.NewService()
-	api := apiv1.NewAPI(paymentService)
+	paymentService := payment.New()
+	api := apiv1.New(paymentService)
 
 	paymentv1.RegisterPaymentServiceServer(grpcServer, api)
 

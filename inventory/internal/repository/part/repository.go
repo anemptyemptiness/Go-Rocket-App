@@ -14,7 +14,7 @@ type repository struct {
 	parts map[uuid.UUID]record.Part
 }
 
-func NewRepository() *repository {
+func New() *repository {
 	now := time.Now()
 
 	return &repository{

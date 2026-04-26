@@ -55,9 +55,9 @@ func main() {
 		}),
 	)
 
-	repo := inventoryRepo.NewRepository()
-	service := inventoryService.NewService(repo)
-	api := apiv1.NewAPI(service)
+	repo := inventoryRepo.New()
+	service := inventoryService.New(repo)
+	api := apiv1.New(service)
 
 	inventoryv1.RegisterInventoryServiceServer(grpcServer, api)
 

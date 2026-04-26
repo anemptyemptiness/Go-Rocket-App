@@ -13,7 +13,7 @@ type repository struct {
 	orders map[uuid.UUID]record.Order
 }
 
-func NewRepository() *repository {
+func New() *repository {
 	return &repository{
 		orders: make(map[uuid.UUID]record.Order),
 	}

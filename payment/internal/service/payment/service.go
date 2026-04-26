@@ -2,6 +2,6 @@ package payment
 
 type service struct{}
 
-func NewService() *service {
+func New() *service {
 	return &service{}
 }

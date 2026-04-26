@@ -6,7 +6,7 @@ type service struct {
 	inventoryClient InventoryClient
 }
 
-func NewService(
+func New(
 	orderRepository OrderRepository,
 	paymentClient PaymentClient,
 	inventoryClient InventoryClient,

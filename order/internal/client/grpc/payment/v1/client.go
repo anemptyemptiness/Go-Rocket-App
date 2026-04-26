@@ -10,7 +10,7 @@ type client struct {
 	paymentClient paymentv1.PaymentServiceClient
 }
 
-func NewClient(conn *grpc.ClientConn) *client {
+func New(conn *grpc.ClientConn) *client {
 	paymentClient := paymentv1.NewPaymentServiceClient(conn)
 
 	return &client{

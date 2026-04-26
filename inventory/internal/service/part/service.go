@@ -4,7 +4,7 @@ type service struct {
 	inventoryRepo Repository
 }
 
-func NewService(inventoryRepo Repository) *service {
+func New(inventoryRepo Repository) *service {
 	return &service{
 		inventoryRepo: inventoryRepo,
 	}
