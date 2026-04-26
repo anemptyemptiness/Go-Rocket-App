@@ -52,3 +52,20 @@ func PartsModelToProto(parts []model.Part) []*inventoryv1.Part {
 
 	return protoParts
 }
+
+func GetPartRequestProtoToModel(req *inventoryv1.GetPartRequest) (uuid.UUID, error) {
+	if req == nil {
+		return uuid.Nil, errs.ErrEmptyRequest
+	}
+
+	if req.GetUuid() == "" {
+		return uuid.Nil, errs.ErrPartUUIDIsEmpty
+	}
+
+	partUUID, err := uuid.Parse(req.GetUuid())
+	if err != nil || partUUID == uuid.Nil {
+		return uuid.Nil, errs.ErrIncorrectPartUUID
+	}
+
+	return partUUID, nil
+}

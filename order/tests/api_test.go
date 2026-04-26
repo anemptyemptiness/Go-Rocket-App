@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 
-	invSvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/service"
+	invSvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
 	orderHandler "github.com/anemptyemptiness/Go-Rocket-App/order/pkg/handler"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/tests/testutil"
 	paySvc "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/service"

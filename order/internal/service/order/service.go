@@ -1,13 +1,13 @@
 package order
 
 type service struct {
-	orderRepository Repository
+	orderRepository OrderRepository
 	paymentClient   PaymentClient
 	inventoryClient InventoryClient
 }
 
 func NewService(
-	orderRepository Repository,
+	orderRepository OrderRepository,
 	paymentClient PaymentClient,
 	inventoryClient InventoryClient,
 ) *service {

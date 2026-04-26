@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/converter"
@@ -12,7 +11,7 @@ import (
 )
 
 func (a *api) GetOrder(ctx context.Context, params orderv1.GetOrderParams) (orderv1.GetOrderRes, error) {
-	order, err := a.orderService.GetOrder(ctx, params.OrderUUID)
+	order, err := a.orderService.Get(ctx, params.OrderUUID)
 	if err != nil {
 		switch {
 		case errors.Is(err, orderErrors.ErrOrderNotFound):
@@ -56,11 +55,11 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 				Message: err.Error(),
 			}, nil
 		default:
-			return nil, fmt.Errorf("создать заказ: %w", err)
+			return nil, err
 		}
 	}
 
-	respModel, err := a.orderService.CreateOrder(ctx, reqModel)
+	respModel, err := a.orderService.Create(ctx, reqModel)
 	if err != nil {
 		switch {
 		case errors.Is(err, orderErrors.ErrPartIsOver):
@@ -78,16 +77,8 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 				Code:    http.StatusBadRequest,
 				Message: err.Error(),
 			}, nil
-		case errors.Is(err, orderErrors.ErrInventoryClientInternal):
-			return &orderv1.CreateOrderInternalServerError{
-				Code:    http.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
 		default:
-			return &orderv1.CreateOrderInternalServerError{
-				Code:    http.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
+			return nil, err
 		}
 	}
 
@@ -98,7 +89,7 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 }
 
 func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params orderv1.PayOrderParams) (orderv1.PayOrderRes, error) {
-	payOrderRequestModel, err := converter.PayOrderRequestToModel(req)
+	payOrderRequestModel, err := converter.PayOrderRequestToModel(req, params)
 	if err != nil {
 		switch {
 		case errors.Is(err, orderErrors.ErrEmptyRequest):
@@ -106,20 +97,12 @@ func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params
 				Code:    http.StatusBadRequest,
 				Message: err.Error(),
 			}, nil
-		case errors.Is(err, orderErrors.ErrUnknownPaymentMethod):
-			return &orderv1.PayOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
-			}, nil
 		default:
-			return &orderv1.PayOrderInternalServerError{
-				Code:    http.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
+			return nil, err
 		}
 	}
 
-	respModel, err := a.orderService.PayOrder(ctx, payOrderRequestModel, params.OrderUUID)
+	transactionUUID, err := a.orderService.Pay(ctx, payOrderRequestModel.OrderUUID, payOrderRequestModel.PaymentMethod)
 	if err != nil {
 		switch {
 		case errors.Is(err, orderErrors.ErrOrderStatusIncorrect):
@@ -137,26 +120,18 @@ func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params
 				Code:    http.StatusBadRequest,
 				Message: err.Error(),
 			}, nil
-		case errors.Is(err, orderErrors.ErrPaymentClientInternal):
-			return &orderv1.PayOrderInternalServerError{
-				Code:    http.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
 		default:
-			return &orderv1.PayOrderInternalServerError{
-				Code:    http.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
+			return nil, err
 		}
 	}
 
 	return &orderv1.PayOrderResponse{
-		TransactionUUID: respModel.TransactionUUID,
+		TransactionUUID: transactionUUID,
 	}, nil
 }
 
 func (a *api) CancelOrder(ctx context.Context, params orderv1.CancelOrderParams) (orderv1.CancelOrderRes, error) {
-	err := a.orderService.CancelOrder(ctx, params.OrderUUID)
+	err := a.orderService.Cancel(ctx, params.OrderUUID)
 	if err != nil {
 		switch {
 		case errors.Is(err, orderErrors.ErrOrderNotFound):
@@ -175,10 +150,7 @@ func (a *api) CancelOrder(ctx context.Context, params orderv1.CancelOrderParams)
 				Message: err.Error(),
 			}, nil
 		default:
-			return &orderv1.CancelOrderInternalServerError{
-				Code:    http.StatusInternalServerError,
-				Message: err.Error(),
-			}, nil
+			return nil, err
 		}
 	}
 

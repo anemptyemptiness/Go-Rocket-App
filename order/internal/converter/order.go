@@ -78,43 +78,15 @@ func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (model.CreateOrd
 	}, nil
 }
 
-func PayOrderRequestToModel(req *orderv1.PayOrderRequest) (model.PayOrderRequest, error) {
+func PayOrderRequestToModel(req *orderv1.PayOrderRequest, params orderv1.PayOrderParams) (model.PayOrderRequest, error) {
 	if req == nil {
 		return model.PayOrderRequest{}, errs.ErrEmptyRequest
 	}
 
-	var paymentMethod model.PaymentMethodString
-	switch req.GetPaymentMethod() {
-	case orderv1.PaymentMethodCARD:
-		paymentMethod = model.PaymentMethodStringCard
-	case orderv1.PaymentMethodSBP:
-		paymentMethod = model.PaymentMethodStringSBP
-	case orderv1.PaymentMethodCREDITCARD:
-		paymentMethod = model.PaymentMethodStringCreditCard
-	case orderv1.PaymentMethodINVESTORMONEY:
-		paymentMethod = model.PaymentMethodStringInvestorMoney
-	default:
-		return model.PayOrderRequest{}, errs.ErrUnknownPaymentMethod
-	}
-
 	return model.PayOrderRequest{
-		PaymentMethod: paymentMethod,
+		PaymentMethod: model.PaymentMethodString(req.GetPaymentMethod()),
+		OrderUUID:     params.OrderUUID,
 	}, nil
-}
-
-func PaymentMethodFromStringToInt32(paymentMethod model.PaymentMethodString) model.PaymentMethodInt32 {
-	switch paymentMethod {
-	case model.PaymentMethodStringCard:
-		return model.PaymentMethodInt32Card
-	case model.PaymentMethodStringSBP:
-		return model.PaymentMethodInt32SBP
-	case model.PaymentMethodStringCreditCard:
-		return model.PaymentMethodInt32CreditCard
-	case model.PaymentMethodStringInvestorMoney:
-		return model.PaymentMethodInt32InvestorMoney
-	default:
-		return model.PaymentMethodInt32Unspecified
-	}
 }
 
 func PaymentMethodFromInt32ToString(paymentMethod model.PaymentMethodInt32) model.PaymentMethodString {

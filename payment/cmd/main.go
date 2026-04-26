@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/v1"
+	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )

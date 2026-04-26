@@ -8,7 +8,7 @@ import (
 	repoConverter "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/converter"
 )
 
-func (r *repository) CreateOrder(_ context.Context, order model.Order) error {
+func (r *repository) Create(_ context.Context, order model.Order) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -17,7 +17,7 @@ func (r *repository) CreateOrder(_ context.Context, order model.Order) error {
 	return nil
 }
 
-func (r *repository) UpdateOrder(ctx context.Context, order model.Order) error {
+func (r *repository) Update(_ context.Context, order model.Order) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

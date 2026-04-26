@@ -2,52 +2,43 @@ package order
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 
-	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/converter"
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 )
 
-func (s *service) GetOrder(ctx context.Context, orderUUID uuid.UUID) (model.Order, error) {
-	order, err := s.orderRepository.GetOrder(ctx, orderUUID)
+func (s *service) Get(ctx context.Context, orderUUID uuid.UUID) (model.Order, error) {
+	order, err := s.orderRepository.Get(ctx, orderUUID)
 	if err != nil {
-		return model.Order{}, err
+		return model.Order{}, fmt.Errorf("получить заказ: %w", err)
 	}
 
 	return order, nil
 }
 
-func (s *service) CreateOrder(ctx context.Context, req model.CreateOrderRequest) (model.CreateOrderResponse, error) {
-	uuids := []uuid.UUID{req.HullUUID, req.EngineUUID}
-
-	if req.ShieldUUID != nil {
-		uuids = append(uuids, *req.ShieldUUID)
-	}
-	if req.WeaponUUID != nil {
-		uuids = append(uuids, *req.WeaponUUID)
-	}
-
+func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (model.Order, error) {
 	clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	resp, err := s.inventoryClient.ListParts(clientCtx, model.ListPartsClientRequest{UUIDs: uuids})
+	parts, err := s.inventoryClient.ListParts(clientCtx, req.PartUUIDs())
 	if err != nil {
-		return model.CreateOrderResponse{}, err
+		return model.Order{}, fmt.Errorf("получить список деталей: %w", err)
 	}
 
 	var totalPrice int64
-	for _, part := range resp.Parts {
+	for _, part := range parts {
 		if part.StockQuantity <= 0 {
-			return model.CreateOrderResponse{}, errs.NewExternalErrWithDescription(errs.ErrPartIsOver, part.Name)
+			return model.Order{}, fmt.Errorf("деталь %s: %w", part.Name, errs.ErrPartIsOver)
 		}
 		totalPrice += part.Price
 	}
 
 	orderUUID := uuid.New()
-	err = s.orderRepository.CreateOrder(ctx, model.Order{
+	order := model.Order{
 		OrderUUID:  orderUUID,
 		HullUUID:   req.HullUUID,
 		EngineUUID: req.EngineUUID,
@@ -56,54 +47,50 @@ func (s *service) CreateOrder(ctx context.Context, req model.CreateOrderRequest)
 		TotalPrice: totalPrice,
 		Status:     model.OrderStatusPendingPayment,
 		CreatedAt:  time.Now(),
-	})
-	if err != nil {
-		return model.CreateOrderResponse{}, err
 	}
 
-	return model.CreateOrderResponse{
-		OrderUUID:  orderUUID,
-		TotalPrice: totalPrice,
-	}, err
+	err = s.orderRepository.Create(ctx, order)
+	if err != nil {
+		return model.Order{}, fmt.Errorf("создать заказ: %w", err)
+	}
+
+	return order, err
 }
 
-func (s *service) PayOrder(ctx context.Context, req model.PayOrderRequest, orderUUID uuid.UUID) (model.PayOrderResponse, error) {
-	order, err := s.orderRepository.GetOrder(ctx, orderUUID)
+func (s *service) Pay(ctx context.Context, orderUUID uuid.UUID, method model.PaymentMethodString) (uuid.UUID, error) {
+	order, err := s.orderRepository.Get(ctx, orderUUID)
 	if err != nil {
-		return model.PayOrderResponse{}, err
+		return uuid.Nil, fmt.Errorf("получить заказ: %w", err)
 	}
 
 	if order.Status != model.OrderStatusPendingPayment {
-		return model.PayOrderResponse{}, errs.ErrOrderStatusIncorrect
+		return uuid.Nil, errs.ErrOrderStatusIncorrect
 	}
 
 	clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	resp, err := s.paymentClient.PayOrder(clientCtx, model.PayOrderClientRequest{
-		OrderUUID:     orderUUID,
-		PaymentMethod: converter.PaymentMethodFromStringToInt32(req.PaymentMethod),
-	})
+	transactionUUID, err := s.paymentClient.PayOrder(clientCtx, orderUUID, method)
 	if err != nil {
-		return model.PayOrderResponse{}, err
+		return uuid.Nil, fmt.Errorf("оплатить заказ: %w", err)
 	}
 
 	order.Status = model.OrderStatusPaid
-	order.TransactionUUID = &resp.TransactionUUID
-	order.PaymentMethod = &req.PaymentMethod
+	order.TransactionUUID = &transactionUUID
+	order.PaymentMethod = &method
 
-	err = s.orderRepository.UpdateOrder(ctx, order)
+	err = s.orderRepository.Update(ctx, order)
 	if err != nil {
-		return model.PayOrderResponse{}, err
+		return uuid.Nil, fmt.Errorf("обновить заказ: %w", err)
 	}
 
-	return model.PayOrderResponse(resp), nil
+	return transactionUUID, nil
 }
 
-func (s *service) CancelOrder(ctx context.Context, orderUUID uuid.UUID) error {
-	order, err := s.orderRepository.GetOrder(ctx, orderUUID)
+func (s *service) Cancel(ctx context.Context, orderUUID uuid.UUID) error {
+	order, err := s.orderRepository.Get(ctx, orderUUID)
 	if err != nil {
-		return err
+		return fmt.Errorf("получить заказ: %w", err)
 	}
 
 	switch order.Status {
@@ -115,9 +102,9 @@ func (s *service) CancelOrder(ctx context.Context, orderUUID uuid.UUID) error {
 
 	order.Status = model.OrderStatusCancelled
 
-	err = s.orderRepository.UpdateOrder(ctx, order)
+	err = s.orderRepository.Update(ctx, order)
 	if err != nil {
-		return err
+		return fmt.Errorf("обновить заказ: %w", err)
 	}
 
 	return nil

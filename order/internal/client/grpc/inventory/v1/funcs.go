@@ -2,7 +2,9 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -12,9 +14,9 @@ import (
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
-func (c *client) ListParts(ctx context.Context, req model.ListPartsClientRequest) (model.ListPartsClientResponse, error) {
-	uuidsStr := make([]string, 0, len(req.UUIDs))
-	for _, uuid := range req.UUIDs {
+func (c *client) ListParts(ctx context.Context, uuids []uuid.UUID) ([]model.Part, error) {
+	uuidsStr := make([]string, 0, len(uuids))
+	for _, uuid := range uuids {
 		uuidsStr = append(uuidsStr, uuid.String())
 	}
 
@@ -24,11 +26,11 @@ func (c *client) ListParts(ctx context.Context, req model.ListPartsClientRequest
 	if err != nil {
 		switch status.Code(err) {
 		case codes.NotFound:
-			return model.ListPartsClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrInventoryClientNotFound, err.Error())
+			return nil, errs.ErrInventoryClientNotFound
 		case codes.InvalidArgument:
-			return model.ListPartsClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrInventoryClientInvalidArgument, err.Error())
+			return nil, errs.ErrInventoryClientInvalidArgument
 		default:
-			return model.ListPartsClientResponse{}, errs.NewExternalErrWithDescription(errs.ErrInventoryClientInternal, err.Error())
+			return nil, fmt.Errorf("получить список деталей: %w", err)
 		}
 	}
 

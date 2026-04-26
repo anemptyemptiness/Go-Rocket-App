@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -14,22 +13,27 @@ import (
 )
 
 func (a *api) GetPart(ctx context.Context, req *inventoryv1.GetPartRequest) (*inventoryv1.GetPartResponse, error) {
-	if req.GetUuid() == "" {
-		return nil, status.Error(codes.InvalidArgument, "идентификатор детали не может быть пустым")
-	}
-
-	partUUID, err := uuid.Parse(req.GetUuid())
-	if err != nil || partUUID == uuid.Nil {
-		return nil, status.Errorf(codes.InvalidArgument, "идентификатор детали невалидный UUID: %v", err)
+	partUUID, err := converter.GetPartRequestProtoToModel(req)
+	if err != nil {
+		switch {
+		case errors.Is(err, inventoryErrors.ErrEmptyRequest):
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case errors.Is(err, inventoryErrors.ErrPartUUIDIsEmpty):
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case errors.Is(err, inventoryErrors.ErrIncorrectPartUUID):
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		default:
+			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
+		}
 	}
 
 	part, err := a.inventoryService.GetPart(ctx, partUUID)
 	if err != nil {
 		switch {
 		case errors.Is(err, inventoryErrors.ErrPartNotFound):
-			return nil, status.Errorf(codes.NotFound, "получить деталь: %v", err)
+			return nil, status.Error(codes.NotFound, err.Error())
 		default:
-			return nil, status.Errorf(codes.Internal, "ошибка получения детали: %v", err)
+			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
 		}
 	}
 
@@ -43,11 +47,11 @@ func (a *api) ListParts(ctx context.Context, req *inventoryv1.ListPartsRequest) 
 	if err != nil {
 		switch {
 		case errors.Is(err, inventoryErrors.ErrIncorrectPartUUID):
-			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в модель: %v", err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case errors.Is(err, inventoryErrors.ErrEmptyRequest):
-			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в модель: %v", err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		default:
-			return nil, status.Errorf(codes.Internal, "конвертация запроса в модель: %v", err)
+			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
 		}
 	}
 
@@ -55,9 +59,9 @@ func (a *api) ListParts(ctx context.Context, req *inventoryv1.ListPartsRequest) 
 	if err != nil {
 		switch {
 		case errors.Is(err, inventoryErrors.ErrPartNotFound):
-			return nil, status.Errorf(codes.NotFound, "получить список деталей: %v", err)
+			return nil, status.Error(codes.NotFound, err.Error())
 		default:
-			return nil, status.Errorf(codes.Internal, "получить список деталей: %v", err)
+			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
 		}
 	}
 

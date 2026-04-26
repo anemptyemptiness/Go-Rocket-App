@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/google/uuid"
@@ -34,7 +35,7 @@ func (r *repository) ListParts(_ context.Context, req model.ListPartsRequest) ([
 		for _, UUID := range req.UUIDs {
 			part, ok := r.parts[UUID]
 			if !ok {
-				return nil, errs.NewErrPartNotFound(UUID)
+				return nil, fmt.Errorf("%w: %s", errs.ErrPartNotFound, UUID.String())
 			}
 
 			parts = append(parts, part)

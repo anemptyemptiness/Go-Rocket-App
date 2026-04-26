@@ -71,6 +71,17 @@ type CreateOrderRequest struct {
 	WeaponUUID *uuid.UUID
 }
 
+func (r *CreateOrderRequest) PartUUIDs() []uuid.UUID {
+	uuids := []uuid.UUID{r.HullUUID, r.EngineUUID}
+	if r.ShieldUUID != nil {
+		uuids = append(uuids, *r.ShieldUUID)
+	}
+	if r.WeaponUUID != nil {
+		uuids = append(uuids, *r.WeaponUUID)
+	}
+	return uuids
+}
+
 type CreateOrderResponse struct {
 	OrderUUID  uuid.UUID
 	TotalPrice int64
@@ -105,6 +116,7 @@ type ListPartsClientResponse struct {
 }
 
 type PayOrderRequest struct {
+	OrderUUID     uuid.UUID
 	PaymentMethod PaymentMethodString
 }
 

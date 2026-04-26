@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/v1"
+	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
 	inventoryclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
 	paymentclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/payment/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"

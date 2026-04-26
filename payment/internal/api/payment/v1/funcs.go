@@ -17,21 +17,21 @@ func (a *api) PayOrder(ctx context.Context, req *paymentv1.PayOrderRequest) (*pa
 	if err != nil {
 		switch {
 		case errors.Is(err, paymentErrors.ErrOrderUUIDIsEmpty):
-			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case errors.Is(err, paymentErrors.ErrIncorrectOrderUUID):
-			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case errors.Is(err, paymentErrors.ErrPaymentMethodUnspecified):
-			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case errors.Is(err, paymentErrors.ErrEmptyRequest):
-			return nil, status.Errorf(codes.InvalidArgument, "конвертация запроса в  модель: %v", err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		default:
-			return nil, status.Errorf(codes.Internal, "конвертация запроса в  модель: %v", err)
+			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
 		}
 	}
 
 	resp, err := a.paymentService.PayOrder(ctx, modelReq)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "обработать оплату заказа: %v", err)
+		return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
 	}
 
 	return &paymentv1.PayOrderResponse{

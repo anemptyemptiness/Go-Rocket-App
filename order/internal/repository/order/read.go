@@ -10,7 +10,7 @@ import (
 	repoConverter "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/converter"
 )
 
-func (r *repository) GetOrder(_ context.Context, orderUUID uuid.UUID) (model.Order, error) {
+func (r *repository) Get(_ context.Context, orderUUID uuid.UUID) (model.Order, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

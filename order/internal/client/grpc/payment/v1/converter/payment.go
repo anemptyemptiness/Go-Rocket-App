@@ -8,17 +8,30 @@ import (
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
-func PayOrderClientResponseProtoToModel(resp *paymentv1.PayOrderResponse) (model.PayOrderClientResponse, error) {
+func PayOrderClientResponseProtoToDTO(resp *paymentv1.PayOrderResponse) (uuid.UUID, error) {
 	if resp == nil {
-		return model.PayOrderClientResponse{}, errs.ErrEmptyResponse
+		return uuid.Nil, errs.ErrEmptyResponse
 	}
 
 	transactionUUID, err := uuid.Parse(resp.GetTransactionUuid())
 	if err != nil {
-		return model.PayOrderClientResponse{}, err
+		return uuid.Nil, err
 	}
 
-	return model.PayOrderClientResponse{
-		TransactionUUID: transactionUUID,
-	}, nil
+	return transactionUUID, nil
+}
+
+func PaymentMethodFromStringToInt32(paymentMethod model.PaymentMethodString) model.PaymentMethodInt32 {
+	switch paymentMethod {
+	case model.PaymentMethodStringCard:
+		return model.PaymentMethodInt32Card
+	case model.PaymentMethodStringSBP:
+		return model.PaymentMethodInt32SBP
+	case model.PaymentMethodStringCreditCard:
+		return model.PaymentMethodInt32CreditCard
+	case model.PaymentMethodStringInvestorMoney:
+		return model.PaymentMethodInt32InvestorMoney
+	default:
+		return model.PaymentMethodInt32Unspecified
+	}
 }

@@ -29,9 +29,9 @@ func PartProtoToModel(protoPart *inventoryv1.Part) (*model.Part, error) {
 	}, nil
 }
 
-func ListPartsClientResponseProtoToModel(resp *inventoryv1.ListPartsResponse) (model.ListPartsClientResponse, error) {
+func ListPartsClientResponseProtoToModel(resp *inventoryv1.ListPartsResponse) ([]model.Part, error) {
 	if resp == nil {
-		return model.ListPartsClientResponse{}, errs.ErrEmptyResponse
+		return nil, errs.ErrEmptyResponse
 	}
 
 	modelParts := make([]model.Part, 0, len(resp.GetParts()))
@@ -39,7 +39,7 @@ func ListPartsClientResponseProtoToModel(resp *inventoryv1.ListPartsResponse) (m
 	for _, protoPart := range resp.GetParts() {
 		modelPart, err := PartProtoToModel(protoPart)
 		if err != nil {
-			return model.ListPartsClientResponse{}, err
+			return nil, err
 		}
 		if modelPart == nil {
 			continue
@@ -48,7 +48,5 @@ func ListPartsClientResponseProtoToModel(resp *inventoryv1.ListPartsResponse) (m
 		modelParts = append(modelParts, *modelPart)
 	}
 
-	return model.ListPartsClientResponse{
-		Parts: modelParts,
-	}, nil
+	return modelParts, nil
 }
