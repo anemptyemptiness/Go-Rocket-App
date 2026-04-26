@@ -48,10 +48,6 @@ func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (model.CreateOrd
 		return model.CreateOrderRequest{}, errs.ErrEmptyRequest
 	}
 
-	if req.GetHullUUID() == uuid.Nil || req.GetEngineUUID() == uuid.Nil {
-		return model.CreateOrderRequest{}, errs.ErrHullUUIDAndEngineUUIDAreRequired
-	}
-
 	var shieldUUID *uuid.UUID
 	if v := req.GetShieldUUID(); v.IsSet() && !v.IsNull() {
 		id, ok := v.Get()
@@ -87,17 +83,4 @@ func PayOrderRequestToModel(req *orderv1.PayOrderRequest, params orderv1.PayOrde
 		PaymentMethod: model.PaymentMethodString(req.GetPaymentMethod()),
 		OrderUUID:     params.OrderUUID,
 	}, nil
-}
-
-func PaymentMethodFromInt32ToString(paymentMethod model.PaymentMethodInt32) model.PaymentMethodString {
-	switch paymentMethod {
-	case model.PaymentMethodInt32Card:
-		return model.PaymentMethodStringCard
-	case model.PaymentMethodInt32SBP:
-		return model.PaymentMethodStringSBP
-	case model.PaymentMethodInt32CreditCard:
-		return model.PaymentMethodStringCreditCard
-	default:
-		return model.PaymentMethodStringInvestorMoney
-	}
 }

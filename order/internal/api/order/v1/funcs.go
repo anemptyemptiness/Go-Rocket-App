@@ -34,11 +34,6 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 	reqModel, err := converter.CreateOrderRequestToModel(req)
 	if err != nil {
 		switch {
-		case errors.Is(err, orderErrors.ErrHullUUIDAndEngineUUIDAreRequired):
-			return &orderv1.CreateOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
-			}, nil
 		case errors.Is(err, orderErrors.ErrShieldUUIDIncorrect):
 			return &orderv1.CreateOrderBadRequest{
 				Code:    http.StatusBadRequest,
@@ -62,6 +57,11 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 	respModel, err := a.orderService.Create(ctx, reqModel)
 	if err != nil {
 		switch {
+		case errors.Is(err, orderErrors.ErrHullUUIDAndEngineUUIDAreRequired):
+			return &orderv1.CreateOrderBadRequest{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}, nil
 		case errors.Is(err, orderErrors.ErrPartIsOver):
 			return &orderv1.CreateOrderConflict{
 				Code:    http.StatusConflict,

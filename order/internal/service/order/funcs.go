@@ -21,6 +21,10 @@ func (s *service) Get(ctx context.Context, orderUUID uuid.UUID) (model.Order, er
 }
 
 func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (model.Order, error) {
+	if req.HullUUID == uuid.Nil || req.EngineUUID == uuid.Nil {
+		return model.Order{}, errs.ErrHullUUIDAndEngineUUIDAreRequired
+	}
+
 	clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
