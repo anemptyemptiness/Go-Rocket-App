@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -42,25 +43,27 @@ func (_m *InventoryClient) EXPECT() *InventoryClient_Expecter {
 }
 
 // ListParts provides a mock function for the type InventoryClient
-func (_mock *InventoryClient) ListParts(ctx context.Context, req model.ListPartsClientRequest) (model.ListPartsClientResponse, error) {
-	ret := _mock.Called(ctx, req)
+func (_mock *InventoryClient) ListParts(ctx context.Context, uuids []uuid.UUID) ([]model.Part, error) {
+	ret := _mock.Called(ctx, uuids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListParts")
 	}
 
-	var r0 model.ListPartsClientResponse
+	var r0 []model.Part
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.ListPartsClientRequest) (model.ListPartsClientResponse, error)); ok {
-		return returnFunc(ctx, req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uuid.UUID) ([]model.Part, error)); ok {
+		return returnFunc(ctx, uuids)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.ListPartsClientRequest) model.ListPartsClientResponse); ok {
-		r0 = returnFunc(ctx, req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uuid.UUID) []model.Part); ok {
+		r0 = returnFunc(ctx, uuids)
 	} else {
-		r0 = ret.Get(0).(model.ListPartsClientResponse)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.Part)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, model.ListPartsClientRequest) error); ok {
-		r1 = returnFunc(ctx, req)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, uuids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -74,20 +77,20 @@ type InventoryClient_ListParts_Call struct {
 
 // ListParts is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req model.ListPartsClientRequest
-func (_e *InventoryClient_Expecter) ListParts(ctx interface{}, req interface{}) *InventoryClient_ListParts_Call {
-	return &InventoryClient_ListParts_Call{Call: _e.mock.On("ListParts", ctx, req)}
+//   - uuids []uuid.UUID
+func (_e *InventoryClient_Expecter) ListParts(ctx interface{}, uuids interface{}) *InventoryClient_ListParts_Call {
+	return &InventoryClient_ListParts_Call{Call: _e.mock.On("ListParts", ctx, uuids)}
 }
 
-func (_c *InventoryClient_ListParts_Call) Run(run func(ctx context.Context, req model.ListPartsClientRequest)) *InventoryClient_ListParts_Call {
+func (_c *InventoryClient_ListParts_Call) Run(run func(ctx context.Context, uuids []uuid.UUID)) *InventoryClient_ListParts_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 model.ListPartsClientRequest
+		var arg1 []uuid.UUID
 		if args[1] != nil {
-			arg1 = args[1].(model.ListPartsClientRequest)
+			arg1 = args[1].([]uuid.UUID)
 		}
 		run(
 			arg0,
@@ -97,12 +100,12 @@ func (_c *InventoryClient_ListParts_Call) Run(run func(ctx context.Context, req 
 	return _c
 }
 
-func (_c *InventoryClient_ListParts_Call) Return(listPartsClientResponse model.ListPartsClientResponse, err error) *InventoryClient_ListParts_Call {
-	_c.Call.Return(listPartsClientResponse, err)
+func (_c *InventoryClient_ListParts_Call) Return(parts []model.Part, err error) *InventoryClient_ListParts_Call {
+	_c.Call.Return(parts, err)
 	return _c
 }
 
-func (_c *InventoryClient_ListParts_Call) RunAndReturn(run func(ctx context.Context, req model.ListPartsClientRequest) (model.ListPartsClientResponse, error)) *InventoryClient_ListParts_Call {
+func (_c *InventoryClient_ListParts_Call) RunAndReturn(run func(ctx context.Context, uuids []uuid.UUID) ([]model.Part, error)) *InventoryClient_ListParts_Call {
 	_c.Call.Return(run)
 	return _c
 }

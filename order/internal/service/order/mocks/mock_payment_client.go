@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -42,67 +43,75 @@ func (_m *PaymentClient) EXPECT() *PaymentClient_Expecter {
 }
 
 // PayOrder provides a mock function for the type PaymentClient
-func (_mock *PaymentClient) PayOrder(ctx context.Context, req model.PayOrderClientRequest) (model.PayOrderClientResponse, error) {
-	ret := _mock.Called(ctx, req)
+func (_mock *PaymentClient) PayOrder(ctx context.Context, orderUUID uuid.UUID, method model.PaymentMethodString) (uuid.UUID, error) {
+	ret := _mock.Called(ctx, orderUUID, method)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Pay")
+		panic("no return value specified for PayOrder")
 	}
 
-	var r0 model.PayOrderClientResponse
+	var r0 uuid.UUID
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.PayOrderClientRequest) (model.PayOrderClientResponse, error)); ok {
-		return returnFunc(ctx, req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, model.PaymentMethodString) (uuid.UUID, error)); ok {
+		return returnFunc(ctx, orderUUID, method)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.PayOrderClientRequest) model.PayOrderClientResponse); ok {
-		r0 = returnFunc(ctx, req)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, model.PaymentMethodString) uuid.UUID); ok {
+		r0 = returnFunc(ctx, orderUUID, method)
 	} else {
-		r0 = ret.Get(0).(model.PayOrderClientResponse)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, model.PayOrderClientRequest) error); ok {
-		r1 = returnFunc(ctx, req)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, model.PaymentMethodString) error); ok {
+		r1 = returnFunc(ctx, orderUUID, method)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// PaymentClient_PayOrder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Pay'
+// PaymentClient_PayOrder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PayOrder'
 type PaymentClient_PayOrder_Call struct {
 	*mock.Call
 }
 
 // PayOrder is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req model.PayOrderClientRequest
-func (_e *PaymentClient_Expecter) PayOrder(ctx interface{}, req interface{}) *PaymentClient_PayOrder_Call {
-	return &PaymentClient_PayOrder_Call{Call: _e.mock.On("Pay", ctx, req)}
+//   - orderUUID uuid.UUID
+//   - method model.PaymentMethodString
+func (_e *PaymentClient_Expecter) PayOrder(ctx interface{}, orderUUID interface{}, method interface{}) *PaymentClient_PayOrder_Call {
+	return &PaymentClient_PayOrder_Call{Call: _e.mock.On("PayOrder", ctx, orderUUID, method)}
 }
 
-func (_c *PaymentClient_PayOrder_Call) Run(run func(ctx context.Context, req model.PayOrderClientRequest)) *PaymentClient_PayOrder_Call {
+func (_c *PaymentClient_PayOrder_Call) Run(run func(ctx context.Context, orderUUID uuid.UUID, method model.PaymentMethodString)) *PaymentClient_PayOrder_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 model.PayOrderClientRequest
+		var arg1 uuid.UUID
 		if args[1] != nil {
-			arg1 = args[1].(model.PayOrderClientRequest)
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 model.PaymentMethodString
+		if args[2] != nil {
+			arg2 = args[2].(model.PaymentMethodString)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *PaymentClient_PayOrder_Call) Return(payOrderClientResponse model.PayOrderClientResponse, err error) *PaymentClient_PayOrder_Call {
-	_c.Call.Return(payOrderClientResponse, err)
+func (_c *PaymentClient_PayOrder_Call) Return(uUID uuid.UUID, err error) *PaymentClient_PayOrder_Call {
+	_c.Call.Return(uUID, err)
 	return _c
 }
 
-func (_c *PaymentClient_PayOrder_Call) RunAndReturn(run func(ctx context.Context, req model.PayOrderClientRequest) (model.PayOrderClientResponse, error)) *PaymentClient_PayOrder_Call {
+func (_c *PaymentClient_PayOrder_Call) RunAndReturn(run func(ctx context.Context, orderUUID uuid.UUID, method model.PaymentMethodString) (uuid.UUID, error)) *PaymentClient_PayOrder_Call {
 	_c.Call.Return(run)
 	return _c
 }
