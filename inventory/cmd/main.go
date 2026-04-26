@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
-	inventoryRepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/inventory"
+	inventoryRepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
 	inventoryService "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )

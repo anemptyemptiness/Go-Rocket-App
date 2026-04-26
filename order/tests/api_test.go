@@ -19,9 +19,9 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	invSvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
-	orderHandler "github.com/anemptyemptiness/Go-Rocket-App/order/pkg/handler"
+	orderHandler "github.com/anemptyemptiness/Go-Rocket-App/order/pkg/app"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/tests/testutil"
-	paySvc "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/service"
+	paySvc "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
