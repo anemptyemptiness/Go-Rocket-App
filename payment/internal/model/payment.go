@@ -13,10 +13,10 @@ const (
 )
 
 type PayOrderRequest struct {
-	OrderUUID     uuid.UUID     `json:"order_uuid"`
-	PaymentMethod PaymentMethod `json:"payment_method"`
+	OrderUUID     string
+	PaymentMethod PaymentMethod
 }
 
 type PayOrderResponse struct {
-	TransactionUUID uuid.UUID `json:"transaction_uuid"`
+	TransactionUUID uuid.UUID
 }

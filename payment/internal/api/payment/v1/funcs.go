@@ -16,12 +16,6 @@ func (a *api) PayOrder(ctx context.Context, req *paymentv1.PayOrderRequest) (*pa
 	modelReq, err := converter.PayOrderRequestProtoToModel(req)
 	if err != nil {
 		switch {
-		case errors.Is(err, paymentErrors.ErrOrderUUIDIsEmpty):
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errors.Is(err, paymentErrors.ErrIncorrectOrderUUID):
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errors.Is(err, paymentErrors.ErrPaymentMethodUnspecified):
-			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case errors.Is(err, paymentErrors.ErrEmptyRequest):
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		default:
@@ -29,12 +23,21 @@ func (a *api) PayOrder(ctx context.Context, req *paymentv1.PayOrderRequest) (*pa
 		}
 	}
 
-	resp, err := a.paymentService.PayOrder(ctx, modelReq)
+	transactionUUID, err := a.paymentService.PayOrder(ctx, modelReq.OrderUUID, modelReq.PaymentMethod)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
+		switch {
+		case errors.Is(err, paymentErrors.ErrOrderUUIDIsEmpty):
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case errors.Is(err, paymentErrors.ErrIncorrectOrderUUID):
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case errors.Is(err, paymentErrors.ErrPaymentMethodUnspecified):
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		default:
+			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)
+		}
 	}
 
 	return &paymentv1.PayOrderResponse{
-		TransactionUuid: resp.TransactionUUID.String(),
+		TransactionUuid: transactionUUID,
 	}, nil
 }

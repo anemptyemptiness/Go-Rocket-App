@@ -7,5 +7,5 @@ import (
 )
 
 type PaymentService interface {
-	PayOrder(ctx context.Context, req model.PayOrderRequest) (model.PayOrderResponse, error)
+	PayOrder(ctx context.Context, orderUUID string, paymentMethod model.PaymentMethod) (string, error)
 }
