@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type PartType int32
@@ -28,5 +26,5 @@ type Part struct {
 
 type ListPartsRequest struct {
 	PartType PartType
-	UUIDs    []uuid.UUID
+	UUIDs    []string
 }

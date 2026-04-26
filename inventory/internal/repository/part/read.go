@@ -25,14 +25,14 @@ func (r *repository) GetPart(_ context.Context, uuid uuid.UUID) (model.Part, err
 	return repoConverter.PartRecordToModel(part), nil
 }
 
-func (r *repository) ListParts(_ context.Context, req model.ListPartsRequest) ([]model.Part, error) {
+func (r *repository) ListParts(_ context.Context, uuids []uuid.UUID, partType model.PartType) ([]model.Part, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	parts := make([]record.Part, 0, len(req.UUIDs))
+	parts := make([]record.Part, 0, len(uuids))
 
-	if len(req.UUIDs) > 0 {
-		for _, UUID := range req.UUIDs {
+	if len(uuids) > 0 {
+		for _, UUID := range uuids {
 			part, ok := r.parts[UUID]
 			if !ok {
 				return nil, fmt.Errorf("%w: %s", errs.ErrPartNotFound, UUID.String())
@@ -42,7 +42,7 @@ func (r *repository) ListParts(_ context.Context, req model.ListPartsRequest) ([
 		}
 	} else {
 		for _, part := range r.parts {
-			if req.PartType == model.PartTypeUnspecified || record.PartType(req.PartType) == part.PartType {
+			if record.PartType(partType) == record.PartTypeUnspecified || record.PartType(partType) == part.PartType {
 				parts = append(parts, part)
 			}
 		}

@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
@@ -26,19 +25,11 @@ func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (model.List
 		return model.ListPartsRequest{}, errs.ErrEmptyRequest
 	}
 
-	uuids := make([]uuid.UUID, 0, len(req.GetUuids()))
-
-	for _, uuidStr := range req.GetUuids() {
-		parsedUUID, err := uuid.Parse(uuidStr)
-		if err != nil {
-			return model.ListPartsRequest{}, errs.ErrIncorrectPartUUID
-		}
-
-		uuids = append(uuids, parsedUUID)
-	}
+	uuidsStr := make([]string, 0, len(req.GetUuids()))
+	uuidsStr = append(uuidsStr, req.GetUuids()...)
 
 	return model.ListPartsRequest{
-		UUIDs:    uuids,
+		UUIDs:    uuidsStr,
 		PartType: model.PartType(req.GetPartType()),
 	}, nil
 }
@@ -53,19 +44,10 @@ func PartsModelToProto(parts []model.Part) []*inventoryv1.Part {
 	return protoParts
 }
 
-func GetPartRequestProtoToModel(req *inventoryv1.GetPartRequest) (uuid.UUID, error) {
+func GetPartRequestProtoToModel(req *inventoryv1.GetPartRequest) (string, error) {
 	if req == nil {
-		return uuid.Nil, errs.ErrEmptyRequest
+		return "", errs.ErrEmptyRequest
 	}
 
-	if req.GetUuid() == "" {
-		return uuid.Nil, errs.ErrPartUUIDIsEmpty
-	}
-
-	partUUID, err := uuid.Parse(req.GetUuid())
-	if err != nil || partUUID == uuid.Nil {
-		return uuid.Nil, errs.ErrIncorrectPartUUID
-	}
-
-	return partUUID, nil
+	return req.GetUuid(), nil
 }
