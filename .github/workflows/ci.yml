@@ -61,7 +61,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && success()
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
-          GIST_ID: 014975123acf427ea15d81d0ff8ac104
+          GIST_ID: ${{ secrets.GIST_ID }}
         run: |
           COVERAGE=$(go tool cover -func=coverage/coverage.out | tail -n1 | awk '{print $NF}')
           
