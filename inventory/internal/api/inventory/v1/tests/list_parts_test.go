@@ -9,8 +9,6 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
@@ -28,9 +26,8 @@ func TestListParts(t *testing.T) {
 	}
 
 	type expected struct {
-		resp        *inventoryv1.ListPartsResponse
-		wantErr     error
-		wantErrCode codes.Code
+		resp    *inventoryv1.ListPartsResponse
+		wantErr error
 	}
 
 	var (
@@ -107,8 +104,7 @@ func TestListParts(t *testing.T) {
 						},
 					},
 				},
-				wantErr:     nil,
-				wantErrCode: codes.OK,
+				wantErr: nil,
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
@@ -159,9 +155,8 @@ func TestListParts(t *testing.T) {
 				req: nil,
 			},
 			expected: expected{
-				resp:        nil,
-				wantErr:     status.Error(codes.InvalidArgument, errs.ErrEmptyRequest.Error()),
-				wantErrCode: codes.InvalidArgument,
+				resp:    nil,
+				wantErr: errs.ErrEmptyRequest,
 			},
 			setupMock: func(svc *mocks.InventoryService) {},
 		},
@@ -174,9 +169,8 @@ func TestListParts(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp:        nil,
-				wantErr:     status.Error(codes.InvalidArgument, errs.ErrIncorrectPartUUID.Error()),
-				wantErrCode: codes.InvalidArgument,
+				resp:    nil,
+				wantErr: errs.ErrIncorrectPartUUID,
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
@@ -193,9 +187,8 @@ func TestListParts(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp:        nil,
-				wantErr:     status.Error(codes.NotFound, errs.ErrPartNotFound.Error()),
-				wantErrCode: codes.NotFound,
+				resp:    nil,
+				wantErr: errs.ErrPartNotFound,
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
@@ -212,9 +205,8 @@ func TestListParts(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp:        nil,
-				wantErr:     status.Error(codes.Internal, "внутренняя ошибка: "+internalError.Error()),
-				wantErrCode: codes.Internal,
+				resp:    nil,
+				wantErr: internalError,
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
@@ -237,7 +229,6 @@ func TestListParts(t *testing.T) {
 			if tc.expected.wantErr != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.expected.wantErr)
-				assert.Equal(t, tc.expected.wantErrCode, status.Code(err))
 				assert.Empty(t, resp)
 			} else {
 				require.NoError(t, err)

@@ -8,8 +8,6 @@ import (
 	"github.com/go-faster/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	paymentapi "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1/mocks"
@@ -99,7 +97,7 @@ func TestPayOrder(t *testing.T) {
 			},
 			expected: expected{
 				transactionUUID: "",
-				err:             status.Error(codes.InvalidArgument, errs.ErrOrderUUIDIsEmpty.Error()),
+				err:             errs.ErrOrderUUIDIsEmpty,
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
@@ -117,7 +115,7 @@ func TestPayOrder(t *testing.T) {
 			},
 			expected: expected{
 				transactionUUID: "",
-				err:             status.Error(codes.InvalidArgument, errs.ErrIncorrectOrderUUID.Error()),
+				err:             errs.ErrIncorrectOrderUUID,
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
@@ -135,7 +133,7 @@ func TestPayOrder(t *testing.T) {
 			},
 			expected: expected{
 				transactionUUID: "",
-				err:             status.Error(codes.InvalidArgument, errs.ErrPaymentMethodUnspecified.Error()),
+				err:             errs.ErrPaymentMethodUnspecified,
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
@@ -150,7 +148,7 @@ func TestPayOrder(t *testing.T) {
 			},
 			expected: expected{
 				transactionUUID: "",
-				err:             status.Error(codes.InvalidArgument, errs.ErrEmptyRequest.Error()),
+				err:             errs.ErrEmptyRequest,
 			},
 			setupMock: func(svc *mocks.PaymentService) {},
 		},
@@ -164,7 +162,7 @@ func TestPayOrder(t *testing.T) {
 			},
 			expected: expected{
 				transactionUUID: "",
-				err:             status.Error(codes.Internal, "внутренняя ошибка: "+unexpectedErr.Error()),
+				err:             unexpectedErr,
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
