@@ -181,7 +181,7 @@ tasks:
       - |
         for mod in order inventory payment; do
           echo "=== $mod ==="
-          (cd "$mod" && go test -v -race -covermode=atomic -coverprofile={{.COVERAGE_DIR}}/${mod}.out -coverpkg={{.TARGET_PACKAGES}} ./...)
+          (cd "$mod" && go test -v -race -covermode=atomic -coverprofile={{.COVERAGE_DIR}}/${mod}.out -coverpkg={{.TARGET_PACKAGES}} ./internal/...)
         done
       - echo "📊 Объединяем отчёты покрытия..."
       - |
@@ -217,7 +217,7 @@ tasks:
       - echo "🌐 Отчёт сохранён в {{.HTML_FILE}}"
       - cmd: open {{.HTML_FILE}}
         platforms: [ darwin ]
-      - cmd: xdg-open {{.HTML_FILE}}
+      - cmd: '"/mnt/c/Program Files/Yandex/YandexBrowser/Application/browser.exe" "$(wslpath -w "{{.HTML_FILE}}")"'
         platforms: [ linux ]
       - cmd: start {{.HTML_FILE}}
         platforms: [ windows ]
