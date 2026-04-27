@@ -17,6 +17,7 @@ import (
 	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
 	inventoryclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
 	paymentclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/payment/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/middleware"
 	orderrepository "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
@@ -76,7 +77,10 @@ func main() {
 	api := apiv1.NewAPI(orderSvc)
 
 	// Создать OpenAPI сервер
-	orderServer, err := orderv1.NewServer(api)
+	orderServer, err := orderv1.NewServer(
+		api,
+		orderv1.WithMiddleware(middleware.ErrorMiddleware),
+	)
 	if err != nil {
 		slog.Error("ошибка создания сервера OpenAPI", "error", err)
 	}

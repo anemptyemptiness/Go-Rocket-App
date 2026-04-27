@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
 	partrepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
 	partsvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
@@ -114,7 +115,11 @@ func RegisterServices(grpcServer *grpc.Server) {
 }
 
 func Interceptors() []grpc.ServerOption {
-	opts := make([]grpc.ServerOption, 0)
+	opts := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(
+			interceptor.ErrorInterceptor(),
+		),
+	}
 
 	return opts
 }

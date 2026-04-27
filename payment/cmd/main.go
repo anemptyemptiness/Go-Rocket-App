@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/interceptor"
 	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
@@ -52,6 +53,9 @@ func main() {
 			MinTime:             keepAliveMinTime,
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
+		grpc.ChainUnaryInterceptor(
+			interceptor.ErrorInterceptor(),
+		),
 	)
 
 	paymentService := payment.New()
