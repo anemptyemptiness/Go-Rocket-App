@@ -22,7 +22,7 @@ func (s *service) GetPart(ctx context.Context, uuidStr string) (model.Part, erro
 
 	part, err := s.inventoryRepo.GetPart(ctx, partUUID)
 	if err != nil {
-		return model.Part{}, fmt.Errorf("получать деталь: %w", err)
+		return model.Part{}, fmt.Errorf("получить деталь: %w", err)
 	}
 
 	return part, nil
