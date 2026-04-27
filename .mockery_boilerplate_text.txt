@@ -1,2 +1,0 @@
-// Code generated for anemptyemptiness/Go-Rocket-App
-// © Dmitry Nerusskov 2026.
