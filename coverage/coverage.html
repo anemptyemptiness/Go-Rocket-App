@@ -1,0 +1,559 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>v1: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1/api.go (100.0%)</option>
+				
+				<option value="file1">github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1/funcs.go (100.0%)</option>
+				
+				<option value="file2">github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part/funcs.go (100.0%)</option>
+				
+				<option value="file3">github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part/service.go (100.0%)</option>
+				
+				<option value="file4">github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1/api.go (100.0%)</option>
+				
+				<option value="file5">github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1/funcs.go (100.0%)</option>
+				
+				<option value="file6">github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/funcs.go (100.0%)</option>
+				
+				<option value="file7">github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/service.go (100.0%)</option>
+				
+				<option value="file8">github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1/api.go (100.0%)</option>
+				
+				<option value="file9">github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1/funcs.go (100.0%)</option>
+				
+				<option value="file10">github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment/funcs.go (100.0%)</option>
+				
+				<option value="file11">github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment/service.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package v1
+
+import inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
+
+type api struct {
+        inventoryv1.UnimplementedInventoryServiceServer
+
+        inventoryService InventoryService
+}
+
+func New(inventoryService InventoryService) *api <span class="cov10" title="11">{
+        return &amp;api{
+                inventoryService: inventoryService,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package v1
+
+import (
+        "context"
+
+        "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/converter"
+        inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
+)
+
+func (a *api) GetPart(ctx context.Context, req *inventoryv1.GetPartRequest) (*inventoryv1.GetPartResponse, error) <span class="cov10" title="6">{
+        partUUID, err := converter.GetPartRequestProtoToModel(req)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov9" title="5">part, err := a.inventoryService.GetPart(ctx, partUUID)
+        if err != nil </span><span class="cov7" title="4">{
+                return nil, err
+        }</span>
+
+        <span class="cov1" title="1">return &amp;inventoryv1.GetPartResponse{
+                Part: converter.PartModelToProto(part),
+        }, nil</span>
+}
+
+func (a *api) ListParts(ctx context.Context, req *inventoryv1.ListPartsRequest) (*inventoryv1.ListPartsResponse, error) <span class="cov9" title="5">{
+        modelReq, err := converter.ListPartsRequestProtoToModel(req)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov7" title="4">parts, err := a.inventoryService.ListParts(ctx, modelReq.UUIDs, modelReq.PartType)
+        if err != nil </span><span class="cov6" title="3">{
+                return nil, err
+        }</span>
+
+        <span class="cov1" title="1">return &amp;inventoryv1.ListPartsResponse{
+                Parts: converter.PartsModelToProto(parts),
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package part
+
+import (
+        "context"
+        "fmt"
+
+        "github.com/google/uuid"
+
+        errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
+        "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+)
+
+func (s *service) GetPart(ctx context.Context, uuidStr string) (model.Part, error) <span class="cov7" title="4">{
+        if uuidStr == "" </span><span class="cov1" title="1">{
+                return model.Part{}, errs.ErrPartUUIDIsEmpty
+        }</span>
+
+        <span class="cov5" title="3">partUUID, err := uuid.Parse(uuidStr)
+        if err != nil || partUUID == uuid.Nil </span><span class="cov1" title="1">{
+                return model.Part{}, errs.ErrIncorrectPartUUID
+        }</span>
+
+        <span class="cov4" title="2">part, err := s.inventoryRepo.GetPart(ctx, partUUID)
+        if err != nil </span><span class="cov1" title="1">{
+                return model.Part{}, fmt.Errorf("получить деталь: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return part, nil</span>
+}
+
+func (s *service) ListParts(ctx context.Context, uuidsStr []string, partType model.PartType) ([]model.Part, error) <span class="cov5" title="3">{
+        uuids := make([]uuid.UUID, 0, len(uuidsStr))
+        for _, uuidStr := range uuidsStr </span><span class="cov10" title="8">{
+                parsedUUID, err := uuid.Parse(uuidStr)
+                if err != nil </span><span class="cov1" title="1">{
+                        return nil, errs.ErrIncorrectPartUUID
+                }</span>
+
+                <span class="cov9" title="7">uuids = append(uuids, parsedUUID)</span>
+        }
+
+        <span class="cov4" title="2">parts, err := s.inventoryRepo.ListParts(ctx, uuids, partType)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("получить список деталей: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return parts, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package part
+
+type service struct {
+        inventoryRepo Repository
+}
+
+func New(inventoryRepo Repository) *service <span class="cov10" title="7">{
+        return &amp;service{
+                inventoryRepo: inventoryRepo,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package v1
+
+import orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
+
+type api struct {
+        orderv1.UnimplementedHandler
+
+        orderService OrderService
+}
+
+func NewAPI(orderService OrderService) *api <span class="cov10" title="21">{
+        return &amp;api{
+                orderService: orderService,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package v1
+
+import (
+        "context"
+
+        "github.com/anemptyemptiness/Go-Rocket-App/order/internal/converter"
+        orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
+)
+
+func (a *api) GetOrder(ctx context.Context, params orderv1.GetOrderParams) (orderv1.GetOrderRes, error) <span class="cov6" title="3">{
+        order, err := a.orderService.Get(ctx, params.OrderUUID)
+        if err != nil </span><span class="cov4" title="2">{
+                return nil, err
+        }</span>
+
+        <span class="cov1" title="1">return converter.OrderModelToDTO(order), nil</span>
+}
+
+func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) (orderv1.CreateOrderRes, error) <span class="cov10" title="7">{
+        reqModel, err := converter.CreateOrderRequestToModel(req)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov9" title="6">respModel, err := a.orderService.Create(ctx, reqModel)
+        if err != nil </span><span class="cov8" title="5">{
+                return nil, err
+        }</span>
+
+        <span class="cov1" title="1">return &amp;orderv1.CreateOrderResponse{
+                OrderUUID:  respModel.OrderUUID,
+                TotalPrice: respModel.TotalPrice,
+        }, nil</span>
+}
+
+func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params orderv1.PayOrderParams) (orderv1.PayOrderRes, error) <span class="cov9" title="6">{
+        payOrderRequestModel, err := converter.PayOrderRequestToModel(req, params)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="5">transactionUUID, err := a.orderService.Pay(ctx, payOrderRequestModel.OrderUUID, payOrderRequestModel.PaymentMethod)
+        if err != nil </span><span class="cov7" title="4">{
+                return nil, err
+        }</span>
+
+        <span class="cov1" title="1">return &amp;orderv1.PayOrderResponse{
+                TransactionUUID: transactionUUID,
+        }, nil</span>
+}
+
+func (a *api) CancelOrder(ctx context.Context, params orderv1.CancelOrderParams) (orderv1.CancelOrderRes, error) <span class="cov8" title="5">{
+        err := a.orderService.Cancel(ctx, params.OrderUUID)
+        if err != nil </span><span class="cov7" title="4">{
+                return nil, err
+        }</span>
+
+        <span class="cov1" title="1">return &amp;orderv1.CancelOrderResponse{}, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package order
+
+import (
+        "context"
+        "fmt"
+        "time"
+
+        "github.com/google/uuid"
+
+        errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
+        "github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+)
+
+func (s *service) Get(ctx context.Context, orderUUID uuid.UUID) (model.Order, error) <span class="cov6" title="3">{
+        order, err := s.orderRepository.Get(ctx, orderUUID)
+        if err != nil </span><span class="cov4" title="2">{
+                return model.Order{}, fmt.Errorf("получить заказ: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return order, nil</span>
+}
+
+func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (model.Order, error) <span class="cov8" title="5">{
+        if req.HullUUID == uuid.Nil || req.EngineUUID == uuid.Nil </span><span class="cov1" title="1">{
+                return model.Order{}, errs.ErrHullUUIDAndEngineUUIDAreRequired
+        }</span>
+
+        <span class="cov7" title="4">clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+        defer cancel()
+
+        parts, err := s.inventoryClient.ListParts(clientCtx, req.PartUUIDs())
+        if err != nil </span><span class="cov1" title="1">{
+                return model.Order{}, fmt.Errorf("получить список деталей: %w", err)
+        }</span>
+
+        <span class="cov6" title="3">var totalPrice int64
+        for _, part := range parts </span><span class="cov10" title="7">{
+                if part.StockQuantity &lt;= 0 </span><span class="cov1" title="1">{
+                        return model.Order{}, fmt.Errorf("деталь %s: %w", part.Name, errs.ErrPartIsOver)
+                }</span>
+                <span class="cov9" title="6">totalPrice += part.Price</span>
+        }
+
+        <span class="cov4" title="2">orderUUID := uuid.New()
+        order := model.Order{
+                OrderUUID:  orderUUID,
+                HullUUID:   req.HullUUID,
+                EngineUUID: req.EngineUUID,
+                ShieldUUID: req.ShieldUUID,
+                WeaponUUID: req.WeaponUUID,
+                TotalPrice: totalPrice,
+                Status:     model.OrderStatusPendingPayment,
+                CreatedAt:  time.Now(),
+        }
+
+        err = s.orderRepository.Create(ctx, order)
+        if err != nil </span><span class="cov1" title="1">{
+                return model.Order{}, fmt.Errorf("создать заказ: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return order, err</span>
+}
+
+func (s *service) Pay(ctx context.Context, orderUUID uuid.UUID, method model.PaymentMethodString) (uuid.UUID, error) <span class="cov8" title="5">{
+        order, err := s.orderRepository.Get(ctx, orderUUID)
+        if err != nil </span><span class="cov1" title="1">{
+                return uuid.Nil, fmt.Errorf("получить заказ: %w", err)
+        }</span>
+
+        <span class="cov7" title="4">if order.Status != model.OrderStatusPendingPayment </span><span class="cov1" title="1">{
+                return uuid.Nil, errs.ErrOrderStatusIncorrect
+        }</span>
+
+        <span class="cov6" title="3">clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+        defer cancel()
+
+        transactionUUID, err := s.paymentClient.PayOrder(clientCtx, orderUUID, method)
+        if err != nil </span><span class="cov1" title="1">{
+                return uuid.Nil, fmt.Errorf("оплатить заказ: %w", err)
+        }</span>
+
+        <span class="cov4" title="2">order.Status = model.OrderStatusPaid
+        order.TransactionUUID = &amp;transactionUUID
+        order.PaymentMethod = &amp;method
+
+        err = s.orderRepository.Update(ctx, order)
+        if err != nil </span><span class="cov1" title="1">{
+                return uuid.Nil, fmt.Errorf("обновить заказ: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return transactionUUID, nil</span>
+}
+
+func (s *service) Cancel(ctx context.Context, orderUUID uuid.UUID) error <span class="cov8" title="5">{
+        order, err := s.orderRepository.Get(ctx, orderUUID)
+        if err != nil </span><span class="cov1" title="1">{
+                return fmt.Errorf("получить заказ: %w", err)
+        }</span>
+
+        <span class="cov7" title="4">switch order.Status </span>{
+        case model.OrderStatusPaid:<span class="cov1" title="1">
+                return errs.ErrOrderAlreadyPaid</span>
+        case model.OrderStatusCancelled:<span class="cov1" title="1">
+                return errs.ErrOrderAlreadyCancelled</span>
+        }
+
+        <span class="cov4" title="2">order.Status = model.OrderStatusCancelled
+
+        err = s.orderRepository.Update(ctx, order)
+        if err != nil </span><span class="cov1" title="1">{
+                return fmt.Errorf("обновить заказ: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package order
+
+type service struct {
+        orderRepository OrderRepository
+        paymentClient   PaymentClient
+        inventoryClient InventoryClient
+}
+
+func New(
+        orderRepository OrderRepository,
+        paymentClient PaymentClient,
+        inventoryClient InventoryClient,
+) *service <span class="cov10" title="18">{
+        return &amp;service{
+                orderRepository: orderRepository,
+                paymentClient:   paymentClient,
+                inventoryClient: inventoryClient,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package v1
+
+import paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
+
+type api struct {
+        paymentv1.UnimplementedPaymentServiceServer
+
+        paymentService PaymentService
+}
+
+func New(paymentService PaymentService) *api <span class="cov10" title="7">{
+        return &amp;api{
+                paymentService: paymentService,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package v1
+
+import (
+        "context"
+
+        "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/converter"
+        paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
+)
+
+func (a *api) PayOrder(ctx context.Context, req *paymentv1.PayOrderRequest) (*paymentv1.PayOrderResponse, error) <span class="cov10" title="7">{
+        modelReq, err := converter.PayOrderRequestProtoToModel(req)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov9" title="6">transactionUUID, err := a.paymentService.PayOrder(ctx, modelReq.OrderUUID, modelReq.PaymentMethod)
+        if err != nil </span><span class="cov7" title="4">{
+                return nil, err
+        }</span>
+
+        <span class="cov4" title="2">return &amp;paymentv1.PayOrderResponse{
+                TransactionUuid: transactionUUID,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package payment
+
+import (
+        "context"
+        "log/slog"
+
+        "github.com/google/uuid"
+
+        errs "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/errors"
+        "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/model"
+)
+
+func (s *service) PayOrder(_ context.Context, orderUUIDStr string, paymentMethod model.PaymentMethod) (string, error) <span class="cov10" title="7">{
+        if orderUUIDStr == "" </span><span class="cov1" title="1">{
+                return "", errs.ErrOrderUUIDIsEmpty
+        }</span>
+
+        <span class="cov9" title="6">orderUUID, err := uuid.Parse(orderUUIDStr)
+        if err != nil </span><span class="cov1" title="1">{
+                return "", errs.ErrIncorrectOrderUUID
+        }</span>
+
+        <span class="cov8" title="5">if paymentMethod == model.PaymentMethodUnspecified </span><span class="cov1" title="1">{
+                return "", errs.ErrPaymentMethodUnspecified
+        }</span>
+
+        <span class="cov7" title="4">transactionUUID := uuid.New()
+
+        slog.Info("оплата прошла успешно",
+                "order_uuid", orderUUID,
+                "transaction_uuid", transactionUUID.String(),
+        )
+
+        return transactionUUID.String(), nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package payment
+
+type service struct{}
+
+func New() *service <span class="cov10" title="7">{
+        return &amp;service{}
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

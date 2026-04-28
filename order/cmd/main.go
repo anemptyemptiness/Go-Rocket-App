@@ -14,14 +14,18 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
-	orderHandler "github.com/anemptyemptiness/Go-Rocket-App/order/pkg/handler"
-	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
-	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
+	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
+	inventoryclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
+	paymentclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/payment/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/middleware"
+	orderrepository "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
+	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
+	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
 
 const (
-	inventoryServiceAddress = "localhost:50051"
-	paymentServiceAddress   = "localhost:50052"
+	inventoryServiceAddress = "0.0.0.0:50051"
+	paymentServiceAddress   = "0.0.0.0:50052"
 
 	httpHost = "localhost"
 	httpPort = "8080"
@@ -66,16 +70,17 @@ func main() {
 	}
 	defer paymentConn.Close()
 
-	// Создаём хранилище и обработчик
-	store := orderHandler.NewOrderStore()
-	h := orderHandler.NewOrderHandler(
-		inventoryv1.NewInventoryServiceClient(inventoryConn),
-		paymentv1.NewPaymentServiceClient(paymentConn),
-		store,
-	)
+	paymentClient := paymentclientv1.New(paymentConn)
+	inventoryClient := inventoryclientv1.New(inventoryConn)
+	orderRepo := orderrepository.New()
+	orderSvc := orderservice.New(orderRepo, paymentClient, inventoryClient)
+	api := apiv1.NewAPI(orderSvc)
 
 	// Создать OpenAPI сервер
-	orderServer, err := orderHandler.SetupServer(h)
+	orderServer, err := orderv1.NewServer(
+		api,
+		orderv1.WithMiddleware(middleware.ErrorMiddleware),
+	)
 	if err != nil {
 		slog.Error("ошибка создания сервера OpenAPI", "error", err)
 	}

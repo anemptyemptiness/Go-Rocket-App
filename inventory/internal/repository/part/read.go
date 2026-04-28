@@ -1,0 +1,56 @@
+package part
+
+import (
+	"context"
+	"fmt"
+	"sort"
+
+	"github.com/google/uuid"
+
+	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	repoConverter "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/converter"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/record"
+)
+
+func (r *repository) GetPart(_ context.Context, uuid uuid.UUID) (model.Part, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	part, ok := r.parts[uuid]
+	if !ok {
+		return model.Part{}, errs.ErrPartNotFound
+	}
+
+	return repoConverter.PartRecordToModel(part), nil
+}
+
+func (r *repository) ListParts(_ context.Context, uuids []uuid.UUID, partType model.PartType) ([]model.Part, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	parts := make([]record.Part, 0, len(uuids))
+
+	if len(uuids) > 0 {
+		for _, UUID := range uuids {
+			part, ok := r.parts[UUID]
+			if !ok {
+				return nil, fmt.Errorf("%w: %s", errs.ErrPartNotFound, UUID.String())
+			}
+
+			parts = append(parts, part)
+		}
+	} else {
+		for _, part := range r.parts {
+			if record.PartType(partType) == record.PartTypeUnspecified || record.PartType(partType) == part.PartType {
+				parts = append(parts, part)
+			}
+		}
+
+		sort.Slice(parts, func(i, j int) bool {
+			return parts[i].Name < parts[j].Name
+		})
+	}
+
+	return repoConverter.PartsRecordToModel(parts), nil
+}
