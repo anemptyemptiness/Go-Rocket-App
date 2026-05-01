@@ -12,6 +12,7 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
@@ -35,6 +36,13 @@ const (
 
 func main() {
 	ctx := context.Background()
+
+	err := godotenv.Load("../inventory.env")
+	if err != nil {
+		slog.Error("не удалось загрузить окружение", "error", err)
+		return
+	}
+
 	lc := net.ListenConfig{}
 
 	lis, err := lc.Listen(context.Background(), "tcp", grpcAddress)
@@ -61,7 +69,7 @@ func main() {
 	)
 
 	// DSN берём из order.env / inventory.env (пока хардкодим в main.go, конфиги — неделя 4)
-	pool, err := pgxpool.New(ctx, "postgres://inventory-service-user:inventory-service-password@localhost:5433/inventory-service?sslmode=disable")
+	pool, err := pgxpool.New(ctx, os.Getenv("DB_URI"))
 	if err != nil {
 		slog.Error("создание пула соединений", "error", err)
 	}

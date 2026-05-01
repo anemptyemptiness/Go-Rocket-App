@@ -13,6 +13,7 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
@@ -45,6 +46,12 @@ const (
 func main() {
 	ctx := context.Background()
 
+	err := godotenv.Load("../order.env")
+	if err != nil {
+		slog.Error("не удалось загрузить окружение", "error", err)
+		return
+	}
+
 	inventoryConn, err := grpc.NewClient(inventoryServiceAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -74,7 +81,7 @@ func main() {
 	paymentClientGRPC := paymentv1.NewPaymentServiceClient(paymentConn)
 
 	// DSN берём из order.env / inventory.env (пока хардкодим в main.go, конфиги — неделя 4)
-	pool, err := pgxpool.New(ctx, "postgres://order-service-user:order-service-password@localhost:5432/order-service?sslmode=disable")
+	pool, err := pgxpool.New(ctx, os.Getenv("DB_URI"))
 	if err != nil {
 		slog.Error("создание пула соединений", "error", err)
 	}

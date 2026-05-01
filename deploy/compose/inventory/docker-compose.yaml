@@ -22,6 +22,10 @@ services: # Здесь описываются контейнеры, необхо
       # Пробрасываем внутренний порт PostgreSQL (5432) наружу на порт из inventory.env (POSTGRES_PORT=5433)
       # Порт 5433, чтобы не конфликтовать с PostgreSQL для OrderService (порт 5432)
 
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       # Проверка готовности PostgreSQL: выполняем pg_isready для проверки доступности базы

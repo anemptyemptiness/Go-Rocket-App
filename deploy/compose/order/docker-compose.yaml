@@ -23,6 +23,10 @@ services: # Раздел, описывающий контейнеры, кото�
       # Пробрасываем внутренний порт PostgreSQL (5432) на порт хоста (POSTGRES_PORT из order.env)
       # Это нужно, чтобы другие сервисы или инструменты могли подключиться к базе
 
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       # Настраиваем проверку готовности контейнера — pg_isready проверяет, принимает ли база подключения

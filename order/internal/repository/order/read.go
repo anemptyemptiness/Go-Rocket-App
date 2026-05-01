@@ -58,22 +58,8 @@ func (r *repository) Get(ctx context.Context, orderUUID string) (model.Order, er
 	}
 	defer rows.Close()
 
-	var items []record.OrderItem
-	for rows.Next() {
-		var item record.OrderItem
-		if err := rows.Scan(
-			&item.Uuid,
-			&item.OrderUuid,
-			&item.PartUuid,
-			&item.PartType,
-			&item.Price,
-			&item.CreatedAt,
-		); err != nil {
-			return model.Order{}, err
-		}
-		items = append(items, item)
-	}
-	if err := rows.Err(); err != nil {
+	items, err := pgx.CollectRows(rows, pgx.RowToStructByName[record.OrderItem])
+	if err != nil {
 		return model.Order{}, err
 	}
 

@@ -37,12 +37,7 @@ func (r *repository) GetPart(ctx context.Context, uuid string) (model.Part, erro
 		&part.CreatedAt,
 	)
 	if err != nil {
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			return model.Part{}, errs.ErrPartNotFound
-		default:
-			return model.Part{}, err
-		}
+		return model.Part{}, handleError(err)
 	}
 
 	return repoConverter.PartRecordToModel(part), nil
@@ -69,39 +64,12 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 	}
 	defer rows.Close()
 
-	modelParts, err := scanParts(rows)
+	parts, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.Part])
 	if err != nil {
 		return nil, err
 	}
 
-	return modelParts, nil
-}
-
-func scanParts(rows pgx.Rows) ([]model.Part, error) {
-	var parts []record.Part
-
-	for rows.Next() {
-		part := record.Part{}
-
-		if scanErr := rows.Scan(
-			&part.UUID,
-			&part.Name,
-			&part.Description,
-			&part.PartType,
-			&part.Price,
-			&part.StockQuantity,
-			&part.CreatedAt,
-		); scanErr != nil {
-			return nil, scanErr
-		}
-
-		parts = append(parts, part)
-	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-
-	return repoConverter.PartsRecordToModel(parts), nil
+	return parts, nil
 }
 
 func handleError(err error) error {

@@ -3,7 +3,6 @@ package part
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sort"
 
 	"github.com/google/uuid"
@@ -47,14 +46,18 @@ func (s *service) ListParts(ctx context.Context, filter model.PartFilter) ([]mod
 
 	respParts := make([]model.Part, 0)
 	if len(filter.Uuids) != 0 {
+		partsByUUID := make(map[string]model.Part, len(parts))
 		for _, part := range parts {
-			if slices.Contains(filter.Uuids, part.UUID) {
-				respParts = append(respParts, part)
-			}
+			partsByUUID[part.UUID] = part
 		}
 
-		if len(respParts) != len(filter.Uuids) {
-			return nil, errs.ErrPartNotFound
+		for _, uuidStr := range filter.Uuids {
+			part, ok := partsByUUID[uuidStr]
+			if !ok {
+				return nil, errs.ErrPartNotFound
+			}
+
+			respParts = append(respParts, part)
 		}
 
 		return respParts, nil

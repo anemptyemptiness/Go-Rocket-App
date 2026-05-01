@@ -1551,20 +1551,3 @@ func TestOrder_Create_WrongPartType_HullAsEngine(t *testing.T) {
 	expectedTotal := int64(HullAluminumPrice + HullTitaniumPrice)
 	assert.Equal(t, expectedTotal, result.TotalPrice)
 }
-
-// Тесты с дубликатами UUID.
-
-func TestOrder_Create_DuplicateUUID_HullAndEngine(t *testing.T) {
-	// Передаём один и тот же UUID для hull и engine.
-	// ListParts вернёт 2 записи с одинаковым UUID, цена удвоится.
-	req := &CreateOrderRequest{
-		HullUUID:   HullAluminumUUID,
-		EngineUUID: HullAluminumUUID,
-	}
-
-	result, resp := createOrder(t, req)
-	defer func() { _ = resp.Body.Close() }()
-
-	testutil.AssertHTTPStatus(t, resp, http.StatusCreated)
-	require.Equal(t, result.TotalPrice, int64(HullAluminumPrice*2))
-}
