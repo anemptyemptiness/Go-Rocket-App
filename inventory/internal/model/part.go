@@ -4,14 +4,29 @@ import (
 	"time"
 )
 
-type PartType int32
+type PartType string
+
+func (pt *PartType) ToInt32() int32 {
+	switch *pt {
+	case PartTypeHull:
+		return 1
+	case PartTypeEngine:
+		return 2
+	case PartTypeShield:
+		return 3
+	case PartTypeWeapon:
+		return 4
+	default:
+		return 0
+	}
+}
 
 const (
-	PartTypeUnspecified PartType = 0
-	PartTypeHull        PartType = 1
-	PartTypeEngine      PartType = 2
-	PartTypeShield      PartType = 3
-	PartTypeWeapon      PartType = 4
+	PartTypeUnspecified PartType = "UNSPECIFIED"
+	PartTypeHull        PartType = "HULL"
+	PartTypeEngine      PartType = "ENGINE"
+	PartTypeShield      PartType = "SHIELD"
+	PartTypeWeapon      PartType = "WEAPON"
 )
 
 type Part struct {
@@ -27,4 +42,9 @@ type Part struct {
 type ListPartsRequest struct {
 	PartType PartType
 	UUIDs    []string
+}
+
+type PartFilter struct {
+	Uuids    []string
+	PartType PartType
 }

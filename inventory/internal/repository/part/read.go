@@ -2,10 +2,9 @@ package part
 
 import (
 	"context"
-	"fmt"
-	"sort"
 
-	"github.com/google/uuid"
+	"github.com/go-faster/errors"
+	"github.com/jackc/pgx/v5"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
@@ -13,44 +12,112 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/record"
 )
 
-func (r *repository) GetPart(_ context.Context, uuid uuid.UUID) (model.Part, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *repository) GetPart(ctx context.Context, uuid string) (model.Part, error) {
+	const query = `
+		SELECT 
+			p.uuid,
+			p.name,
+			p.description,
+			p.part_type,
+			p.price,
+			p.stock_quantity,
+			p.created_at
+		FROM parts AS p
+		WHERE p.uuid = $1;`
 
-	part, ok := r.parts[uuid]
-	if !ok {
-		return model.Part{}, errs.ErrPartNotFound
+	var part record.Part
+
+	err := r.getter.DefaultTrOrDB(ctx, r.pool).QueryRow(ctx, query, uuid).Scan(
+		&part.UUID,
+		&part.Name,
+		&part.Description,
+		&part.PartType,
+		&part.Price,
+		&part.StockQuantity,
+		&part.CreatedAt,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return model.Part{}, errs.ErrPartNotFound
+		default:
+			return model.Part{}, err
+		}
 	}
 
 	return repoConverter.PartRecordToModel(part), nil
 }
 
-func (r *repository) ListParts(_ context.Context, uuids []uuid.UUID, partType model.PartType) ([]model.Part, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+	var rows pgx.Rows
+	var err error
 
-	parts := make([]record.Part, 0, len(uuids))
+	const query = `
+		SELECT
+			p.uuid,
+			p.name,
+			p.description,
+			p.part_type,
+			p.price,
+			p.stock_quantity,
+			p.created_at
+		FROM parts AS p
+		WHERE (CARDINALITY($1::UUID[]) != 0 AND p.uuid = ANY($1))
+			OR (CARDINALITY($1::UUID[]) = 0 AND ($2 = 'UNSPECIFIED' OR p.part_type = $2))
+		ORDER BY
+		    CASE 
+		        WHEN CARDINALITY($1::UUID[]) = 0 THEN p.name 
+		    END,
+			CASE
+			    WHEN CARDINALITY($1::UUID[]) != 0 THEN ARRAY_POSITION($1::UUID[], p.uuid)
+			END;`
 
-	if len(uuids) > 0 {
-		for _, UUID := range uuids {
-			part, ok := r.parts[UUID]
-			if !ok {
-				return nil, fmt.Errorf("%w: %s", errs.ErrPartNotFound, UUID.String())
-			}
+	rows, err = r.getter.DefaultTrOrDB(ctx, r.pool).Query(ctx, query, filter.Uuids, filter.PartType)
+	if err != nil {
+		return nil, handleError(err)
+	}
+	defer rows.Close()
 
-			parts = append(parts, part)
+	modelParts, err := scanParts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return modelParts, nil
+}
+
+func scanParts(rows pgx.Rows) ([]model.Part, error) {
+	var parts []record.Part
+
+	for rows.Next() {
+		part := record.Part{}
+
+		if scanErr := rows.Scan(
+			&part.UUID,
+			&part.Name,
+			&part.Description,
+			&part.PartType,
+			&part.Price,
+			&part.StockQuantity,
+			&part.CreatedAt,
+		); scanErr != nil {
+			return nil, scanErr
 		}
-	} else {
-		for _, part := range r.parts {
-			if record.PartType(partType) == record.PartTypeUnspecified || record.PartType(partType) == part.PartType {
-				parts = append(parts, part)
-			}
-		}
 
-		sort.Slice(parts, func(i, j int) bool {
-			return parts[i].Name < parts[j].Name
-		})
+		parts = append(parts, part)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 
 	return repoConverter.PartsRecordToModel(parts), nil
+}
+
+func handleError(err error) error {
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return errs.ErrPartNotFound
+	default:
+		return err
+	}
 }

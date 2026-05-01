@@ -33,9 +33,8 @@ func TestGetPart(t *testing.T) {
 	var (
 		ctx = context.Background()
 
-		hullUUID        = gofakeit.UUID()
-		hullUUIDEmpty   = ""
-		hullUUIDInvalid = "flasmfkamsf"
+		hullUUID      = gofakeit.UUID()
+		hullUUIDEmpty = ""
 
 		internalError = errors.New("внезапность")
 
@@ -126,23 +125,6 @@ func TestGetPart(t *testing.T) {
 				svc.EXPECT().
 					GetPart(ctx, hullUUIDEmpty).
 					Return(model.Part{}, errs.ErrPartUUIDIsEmpty)
-			},
-		},
-		{
-			name: "ошибка: UUID детали некорректный",
-			args: args{
-				req: &inventoryv1.GetPartRequest{
-					Uuid: hullUUIDInvalid,
-				},
-			},
-			expected: expected{
-				resp:    nil,
-				wantErr: errs.ErrIncorrectPartUUID,
-			},
-			setupMock: func(svc *mocks.InventoryService) {
-				svc.EXPECT().
-					GetPart(ctx, hullUUIDInvalid).
-					Return(model.Part{}, errs.ErrIncorrectPartUUID)
 			},
 		},
 		{

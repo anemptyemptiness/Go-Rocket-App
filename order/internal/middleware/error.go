@@ -16,92 +16,158 @@ func ErrorMiddleware(req ogenmw.Request, next ogenmw.Next) (ogenmw.Response, err
 		return resp, nil
 	}
 
-	switch {
-	case errors.Is(err, orderErrors.ErrOrderNotFound):
+	status := statusFromError(err)
+	if status == http.StatusInternalServerError {
+		return ogenmw.Response{}, err
+	}
+
+	response, ok := responseFromStatus(req.OperationName, status, err.Error())
+	if !ok {
+		return ogenmw.Response{}, err
+	}
+
+	return response, nil
+}
+
+func responseFromStatus(operation string, status int, msg string) (ogenmw.Response, bool) {
+	switch operation {
+	case "GetOrder":
+		return getOrderResponse(status, msg)
+
+	case "CreateOrder":
+		return createOrderResponse(status, msg)
+
+	case "PayOrder":
+		return payOrderResponse(status, msg)
+
+	case "CancelOrder":
+		return cancelOrderResponse(status, msg)
+
+	default:
+		return ogenmw.Response{}, false
+	}
+}
+
+func getOrderResponse(status int, msg string) (ogenmw.Response, bool) {
+	switch status {
+	case http.StatusNotFound:
 		return ogenmw.Response{
 			Type: &orderv1.GetOrderNotFound{
-				Code:    http.StatusNotFound,
-				Message: err.Error(),
+				Code:    status,
+				Message: msg,
 			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrShieldUUIDIncorrect):
+		}, true
+	default:
+		return ogenmw.Response{}, false
+	}
+}
+
+func createOrderResponse(status int, msg string) (ogenmw.Response, bool) {
+	switch status {
+	case http.StatusBadRequest:
 		return ogenmw.Response{
 			Type: &orderv1.CreateOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
+				Code:    status,
+				Message: msg,
 			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrWeaponUUIDIncorrect):
-		return ogenmw.Response{
-			Type: &orderv1.CreateOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
-			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrEmptyRequest):
-		return ogenmw.Response{
-			Type: &orderv1.CreateOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
-			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrHullUUIDAndEngineUUIDAreRequired):
-		return ogenmw.Response{
-			Type: &orderv1.CreateOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
-			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrPartIsOver):
-		return ogenmw.Response{
-			Type: &orderv1.CreateOrderConflict{
-				Code:    http.StatusConflict,
-				Message: err.Error(),
-			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrInventoryClientNotFound):
+		}, true
+	case http.StatusNotFound:
 		return ogenmw.Response{
 			Type: &orderv1.CreateOrderNotFound{
-				Code:    http.StatusNotFound,
-				Message: err.Error(),
+				Code:    status,
+				Message: msg,
 			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrInventoryClientInvalidArgument):
+		}, true
+	case http.StatusConflict:
 		return ogenmw.Response{
-			Type: &orderv1.CreateOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
+			Type: &orderv1.CreateOrderConflict{
+				Code:    status,
+				Message: msg,
 			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrOrderStatusIncorrect):
-		return ogenmw.Response{
-			Type: &orderv1.PayOrderConflict{
-				Code:    http.StatusConflict,
-				Message: err.Error(),
-			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrPaymentClientInvalidArgument):
+		}, true
+	default:
+		return ogenmw.Response{}, false
+	}
+}
+
+func payOrderResponse(status int, msg string) (ogenmw.Response, bool) {
+	switch status {
+	case http.StatusBadRequest:
 		return ogenmw.Response{
 			Type: &orderv1.PayOrderBadRequest{
-				Code:    http.StatusBadRequest,
-				Message: err.Error(),
+				Code:    status,
+				Message: msg,
 			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrOrderAlreadyPaid):
+		}, true
+	case http.StatusConflict:
 		return ogenmw.Response{
-			Type: &orderv1.CancelOrderConflict{
-				Code:    http.StatusConflict,
-				Message: err.Error(),
+			Type: &orderv1.PayOrderConflict{
+				Code:    status,
+				Message: msg,
 			},
-		}, nil
-	case errors.Is(err, orderErrors.ErrOrderAlreadyCancelled):
+		}, true
+	case http.StatusNotFound:
 		return ogenmw.Response{
-			Type: &orderv1.CancelOrderConflict{
-				Code:    http.StatusConflict,
-				Message: err.Error(),
+			Type: &orderv1.PayOrderNotFound{
+				Code:    status,
+				Message: msg,
 			},
-		}, nil
+		}, true
 	default:
-		return ogenmw.Response{}, err
+		return ogenmw.Response{}, false
+	}
+}
+
+func cancelOrderResponse(status int, msg string) (ogenmw.Response, bool) {
+	switch status {
+	case http.StatusConflict:
+		return ogenmw.Response{
+			Type: &orderv1.CancelOrderConflict{
+				Code:    status,
+				Message: msg,
+			},
+		}, true
+	case http.StatusNotFound:
+		return ogenmw.Response{
+			Type: &orderv1.CancelOrderNotFound{
+				Code:    status,
+				Message: msg,
+			},
+		}, true
+	default:
+		return ogenmw.Response{}, false
+	}
+}
+
+func statusFromError(err error) int {
+	switch {
+	case errors.Is(err, orderErrors.ErrOrderNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, orderErrors.ErrShieldUUIDIncorrect):
+		return http.StatusBadRequest
+	case errors.Is(err, orderErrors.ErrWeaponUUIDIncorrect):
+		return http.StatusBadRequest
+	case errors.Is(err, orderErrors.ErrEmptyRequest):
+		return http.StatusBadRequest
+	case errors.Is(err, orderErrors.ErrHullUUIDAndEngineUUIDAreRequired):
+		return http.StatusBadRequest
+	case errors.Is(err, orderErrors.ErrPartIsOver):
+		return http.StatusConflict
+	case errors.Is(err, orderErrors.ErrInventoryClientNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, orderErrors.ErrInventoryClientInvalidArgument):
+		return http.StatusBadRequest
+	case errors.Is(err, orderErrors.ErrOrderStatusIncorrect):
+		return http.StatusConflict
+	case errors.Is(err, orderErrors.ErrPaymentClientInvalidArgument):
+		return http.StatusBadRequest
+	case errors.Is(err, orderErrors.ErrOrderAlreadyPaid):
+		return http.StatusConflict
+	case errors.Is(err, orderErrors.ErrOrderAlreadyCancelled):
+		return http.StatusConflict
+	case errors.Is(err, orderErrors.ErrInvalidOrderUUID):
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
 	}
 }

@@ -1,3 +1,8 @@
 .idea
 bin
 .mockery_boilerplate_text.txt
+.gocache
+
+inventory.env
+order.env
+payment.env

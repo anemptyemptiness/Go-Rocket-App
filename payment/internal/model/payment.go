@@ -1,7 +1,5 @@
 package model
 
-import "github.com/google/uuid"
-
 type PaymentMethod int32
 
 const (
@@ -12,11 +10,7 @@ const (
 	PaymentMethodInvestorMoney PaymentMethod = 4
 )
 
-type PayOrderRequest struct {
+type PayRequest struct {
 	OrderUUID     string
 	PaymentMethod PaymentMethod
-}
-
-type PayOrderResponse struct {
-	TransactionUUID uuid.UUID
 }

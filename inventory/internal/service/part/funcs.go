@@ -15,12 +15,12 @@ func (s *service) GetPart(ctx context.Context, uuidStr string) (model.Part, erro
 		return model.Part{}, errs.ErrPartUUIDIsEmpty
 	}
 
-	partUUID, err := uuid.Parse(uuidStr)
-	if err != nil || partUUID == uuid.Nil {
-		return model.Part{}, errs.ErrIncorrectPartUUID
+	partUuid, err := uuid.Parse(uuidStr)
+	if err != nil || partUuid == uuid.Nil {
+		return model.Part{}, errs.ErrPartUUIDInvalid
 	}
 
-	part, err := s.inventoryRepo.GetPart(ctx, partUUID)
+	part, err := s.inventoryRepo.GetPart(ctx, uuidStr)
 	if err != nil {
 		return model.Part{}, fmt.Errorf("получить деталь: %w", err)
 	}
@@ -28,20 +28,23 @@ func (s *service) GetPart(ctx context.Context, uuidStr string) (model.Part, erro
 	return part, nil
 }
 
-func (s *service) ListParts(ctx context.Context, uuidsStr []string, partType model.PartType) ([]model.Part, error) {
-	uuids := make([]uuid.UUID, 0, len(uuidsStr))
-	for _, uuidStr := range uuidsStr {
-		parsedUUID, err := uuid.Parse(uuidStr)
-		if err != nil {
-			return nil, errs.ErrIncorrectPartUUID
+func (s *service) ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+	if len(filter.Uuids) > 0 {
+		for _, uuidCheck := range filter.Uuids {
+			partUuid, err := uuid.Parse(uuidCheck)
+			if err != nil || partUuid == uuid.Nil {
+				return nil, errs.ErrPartUUIDInvalid
+			}
 		}
-
-		uuids = append(uuids, parsedUUID)
 	}
 
-	parts, err := s.inventoryRepo.ListParts(ctx, uuids, partType)
+	parts, err := s.inventoryRepo.ListParts(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("получить список деталей: %w", err)
+	}
+
+	if len(filter.Uuids) > 0 && len(parts) != len(filter.Uuids) {
+		return nil, errs.ErrPartNotFound
 	}
 
 	return parts, nil

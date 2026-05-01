@@ -11,7 +11,12 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 )
 
-func (s *service) Get(ctx context.Context, orderUUID uuid.UUID) (model.Order, error) {
+func (s *service) Get(ctx context.Context, orderUUID string) (model.Order, error) {
+	orderUuid, err := uuid.Parse(orderUUID)
+	if err != nil || orderUuid == uuid.Nil || orderUUID == "" {
+		return model.Order{}, errs.ErrInvalidOrderUUID
+	}
+
 	order, err := s.orderRepository.Get(ctx, orderUUID)
 	if err != nil {
 		return model.Order{}, fmt.Errorf("получить заказ: %w", err)
@@ -21,7 +26,7 @@ func (s *service) Get(ctx context.Context, orderUUID uuid.UUID) (model.Order, er
 }
 
 func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (model.Order, error) {
-	if req.HullUUID == uuid.Nil || req.EngineUUID == uuid.Nil {
+	if req.HullUUID == "" || req.EngineUUID == "" {
 		return model.Order{}, errs.ErrHullUUIDAndEngineUUIDAreRequired
 	}
 
@@ -34,41 +39,57 @@ func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (mod
 	}
 
 	var totalPrice int64
+	var orderItems []model.OrderItem
 	for _, part := range parts {
 		if part.StockQuantity <= 0 {
 			return model.Order{}, fmt.Errorf("деталь %s: %w", part.Name, errs.ErrPartIsOver)
 		}
+
+		orderItems = append(orderItems, model.OrderItem{
+			PartUuid: part.UUID,
+			PartType: part.PartType,
+			Price:    part.Price,
+		})
+
 		totalPrice += part.Price
 	}
 
-	orderUUID := uuid.New()
 	order := model.Order{
-		OrderUUID:  orderUUID,
-		HullUUID:   req.HullUUID,
-		EngineUUID: req.EngineUUID,
-		ShieldUUID: req.ShieldUUID,
-		WeaponUUID: req.WeaponUUID,
+		Items:      orderItems,
 		TotalPrice: totalPrice,
 		Status:     model.OrderStatusPendingPayment,
-		CreatedAt:  time.Now(),
 	}
 
-	err = s.orderRepository.Create(ctx, order)
+	err = s.txManager.Do(ctx, func(txCtx context.Context) error {
+		uuid, err := s.orderRepository.Create(txCtx, order)
+		if err != nil {
+			return fmt.Errorf("создать заказ: %w", err)
+		}
+
+		order.UUID = uuid
+
+		return nil
+	})
 	if err != nil {
-		return model.Order{}, fmt.Errorf("создать заказ: %w", err)
+		return model.Order{}, err
 	}
 
 	return order, err
 }
 
-func (s *service) Pay(ctx context.Context, orderUUID uuid.UUID, method model.PaymentMethodString) (uuid.UUID, error) {
+func (s *service) Pay(ctx context.Context, orderUUID string, method model.PaymentMethod) (string, error) {
+	orderUuid, err := uuid.Parse(orderUUID)
+	if err != nil || orderUuid == uuid.Nil || orderUUID == "" {
+		return "", errs.ErrInvalidOrderUUID
+	}
+
 	order, err := s.orderRepository.Get(ctx, orderUUID)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("получить заказ: %w", err)
+		return "", fmt.Errorf("получить заказ: %w", err)
 	}
 
 	if order.Status != model.OrderStatusPendingPayment {
-		return uuid.Nil, errs.ErrOrderStatusIncorrect
+		return "", errs.ErrOrderStatusIncorrect
 	}
 
 	clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -76,7 +97,7 @@ func (s *service) Pay(ctx context.Context, orderUUID uuid.UUID, method model.Pay
 
 	transactionUUID, err := s.paymentClient.PayOrder(clientCtx, orderUUID, method)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("оплатить заказ: %w", err)
+		return "", fmt.Errorf("оплатить заказ: %w", err)
 	}
 
 	order.Status = model.OrderStatusPaid
@@ -85,13 +106,13 @@ func (s *service) Pay(ctx context.Context, orderUUID uuid.UUID, method model.Pay
 
 	err = s.orderRepository.Update(ctx, order)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("обновить заказ: %w", err)
+		return "", fmt.Errorf("обновить заказ: %w", err)
 	}
 
 	return transactionUUID, nil
 }
 
-func (s *service) Cancel(ctx context.Context, orderUUID uuid.UUID) error {
+func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 	order, err := s.orderRepository.Get(ctx, orderUUID)
 	if err != nil {
 		return fmt.Errorf("получить заказ: %w", err)

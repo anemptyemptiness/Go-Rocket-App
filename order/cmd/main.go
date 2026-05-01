@@ -10,17 +10,16 @@ import (
 	"syscall"
 	"time"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
-	inventoryclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
-	paymentclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/payment/v1"
-	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/middleware"
-	orderrepository "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
-	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
-	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/pkg/app"
+	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
+	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
 const (
@@ -44,6 +43,8 @@ const (
 )
 
 func main() {
+	ctx := context.Background()
+
 	inventoryConn, err := grpc.NewClient(inventoryServiceAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -56,6 +57,7 @@ func main() {
 		slog.Error("не удалось подключиться к InventoryService", "error", err)
 	}
 	defer inventoryConn.Close()
+	inventoryClientGRPC := inventoryv1.NewInventoryServiceClient(inventoryConn)
 
 	paymentConn, err := grpc.NewClient(paymentServiceAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -69,18 +71,31 @@ func main() {
 		slog.Error("не удалось подключиться к PaymentService", "error", err)
 	}
 	defer paymentConn.Close()
+	paymentClientGRPC := paymentv1.NewPaymentServiceClient(paymentConn)
 
-	paymentClient := paymentclientv1.New(paymentConn)
-	inventoryClient := inventoryclientv1.New(inventoryConn)
-	orderRepo := orderrepository.New()
-	orderSvc := orderservice.New(orderRepo, paymentClient, inventoryClient)
-	api := apiv1.NewAPI(orderSvc)
+	// DSN берём из order.env / inventory.env (пока хардкодим в main.go, конфиги — неделя 4)
+	pool, err := pgxpool.New(ctx, "postgres://order-service-user:order-service-password@localhost:5432/order-service?sslmode=disable")
+	if err != nil {
+		slog.Error("создание пула соединений", "error", err)
+	}
+	defer pool.Close()
+
+	// Проверяем соединение
+	err = pool.Ping(ctx)
+	if err != nil {
+		slog.Error("проверка соединения с БД", "error", err)
+	}
+
+	slog.Info("подключение к PostgreSQL установлено")
+
+	// Создаём Transaction Manager для pgx
+	txManager, err := manager.New(trmpgx.NewDefaultFactory(pool))
+	if err != nil {
+		slog.Error("создание transaction manager", "error", err)
+	}
 
 	// Создать OpenAPI сервер
-	orderServer, err := orderv1.NewServer(
-		api,
-		orderv1.WithMiddleware(middleware.ErrorMiddleware),
-	)
+	orderServer, err := app.NewHTTPHandler(pool, txManager, inventoryClientGRPC, paymentClientGRPC)
 	if err != nil {
 		slog.Error("ошибка создания сервера OpenAPI", "error", err)
 	}

@@ -3,12 +3,14 @@ package v1
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/converter"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
 
 func (a *api) GetOrder(ctx context.Context, params orderv1.GetOrderParams) (orderv1.GetOrderRes, error) {
-	order, err := a.orderService.Get(ctx, params.OrderUUID)
+	order, err := a.orderService.Get(ctx, params.OrderUUID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -22,14 +24,14 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 		return nil, err
 	}
 
-	respModel, err := a.orderService.Create(ctx, reqModel)
+	order, err := a.orderService.Create(ctx, reqModel)
 	if err != nil {
 		return nil, err
 	}
 
 	return &orderv1.CreateOrderResponse{
-		OrderUUID:  respModel.OrderUUID,
-		TotalPrice: respModel.TotalPrice,
+		OrderUUID:  uuid.MustParse(order.UUID),
+		TotalPrice: order.TotalPrice,
 	}, nil
 }
 
@@ -45,12 +47,12 @@ func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params
 	}
 
 	return &orderv1.PayOrderResponse{
-		TransactionUUID: transactionUUID,
+		TransactionUUID: uuid.MustParse(transactionUUID),
 	}, nil
 }
 
 func (a *api) CancelOrder(ctx context.Context, params orderv1.CancelOrderParams) (orderv1.CancelOrderRes, error) {
-	err := a.orderService.Cancel(ctx, params.OrderUUID)
+	err := a.orderService.Cancel(ctx, params.OrderUUID.String())
 	if err != nil {
 		return nil, err
 	}

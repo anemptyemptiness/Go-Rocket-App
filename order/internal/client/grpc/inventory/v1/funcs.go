@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -14,14 +13,9 @@ import (
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
-func (c *client) ListParts(ctx context.Context, uuids []uuid.UUID) ([]model.Part, error) {
-	uuidsStr := make([]string, 0, len(uuids))
-	for _, uuid := range uuids {
-		uuidsStr = append(uuidsStr, uuid.String())
-	}
-
+func (c *client) ListParts(ctx context.Context, uuids []string) ([]model.Part, error) {
 	resp, err := c.inventoryClient.ListParts(ctx, &inventoryv1.ListPartsRequest{
-		Uuids: uuidsStr,
+		Uuids: uuids,
 	})
 	if err != nil {
 		switch status.Code(err) {

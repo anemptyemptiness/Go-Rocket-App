@@ -13,10 +13,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/interceptor"
-	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment"
-	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
 )
 
 const (
@@ -58,10 +56,7 @@ func main() {
 		),
 	)
 
-	paymentService := payment.New()
-	api := apiv1.New(paymentService)
-
-	paymentv1.RegisterPaymentServiceServer(grpcServer, api)
+	app.RegisterServices(grpcServer)
 
 	// Включаем reflection для postman/grpcurl
 	reflection.Register(grpcServer)

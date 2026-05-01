@@ -25,7 +25,7 @@ func TestPayOrder(t *testing.T) {
 	}
 
 	type expected struct {
-		resp orderv1.PayOrderRes
+		resp *orderv1.PayOrderResponse
 		err  error
 	}
 
@@ -56,12 +56,11 @@ func TestPayOrder(t *testing.T) {
 				resp: &orderv1.PayOrderResponse{
 					TransactionUUID: transactionUUID,
 				},
-				err: nil,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Pay(ctx, orderUUID, model.PaymentMethodStringCard).
-					Return(transactionUUID, nil)
+					Pay(ctx, orderUUID.String(), model.PaymentMethodCard).
+					Return(transactionUUID.String(), nil)
 			},
 		},
 		{
@@ -73,8 +72,7 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrEmptyRequest,
+				err: ordererrs.ErrEmptyRequest,
 			},
 			setupMock: func(svc *mocks.OrderService) {},
 		},
@@ -89,13 +87,12 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrOrderStatusIncorrect,
+				err: ordererrs.ErrOrderStatusIncorrect,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Pay(ctx, orderUUID, model.PaymentMethodStringSBP).
-					Return(uuid.Nil, ordererrs.ErrOrderStatusIncorrect)
+					Pay(ctx, orderUUID.String(), model.PaymentMethodSBP).
+					Return("", ordererrs.ErrOrderStatusIncorrect)
 			},
 		},
 		{
@@ -109,13 +106,12 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrOrderNotFound,
+				err: ordererrs.ErrOrderNotFound,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Pay(ctx, orderUUID, model.PaymentMethodStringCreditCard).
-					Return(uuid.Nil, ordererrs.ErrOrderNotFound)
+					Pay(ctx, orderUUID.String(), model.PaymentMethodCreditCard).
+					Return("", ordererrs.ErrOrderNotFound)
 			},
 		},
 		{
@@ -129,13 +125,12 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrPaymentClientInvalidArgument,
+				err: ordererrs.ErrPaymentClientInvalidArgument,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Pay(ctx, orderUUID, model.PaymentMethodStringInvestorMoney).
-					Return(uuid.Nil, ordererrs.ErrPaymentClientInvalidArgument)
+					Pay(ctx, orderUUID.String(), model.PaymentMethodInvestorMoney).
+					Return("", ordererrs.ErrPaymentClientInvalidArgument)
 			},
 		},
 		{
@@ -149,13 +144,12 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  unexpectedErr,
+				err: unexpectedErr,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Pay(ctx, orderUUID, model.PaymentMethodStringCard).
-					Return(uuid.Nil, unexpectedErr)
+					Pay(ctx, orderUUID.String(), model.PaymentMethodCard).
+					Return("", unexpectedErr)
 			},
 		},
 	}
@@ -173,16 +167,14 @@ func TestPayOrder(t *testing.T) {
 			if tc.expected.err != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.expected.err)
-				assert.Empty(t, resp)
-			} else {
-				require.NoError(t, err)
-				assert.NotEmpty(t, resp)
-				assert.IsType(t, &orderv1.PayOrderResponse{}, resp)
-
-				result, ok := resp.(*orderv1.PayOrderResponse)
-				require.True(t, ok)
-				assert.Equal(t, tc.expected.resp.(*orderv1.PayOrderResponse).GetTransactionUUID(), result.GetTransactionUUID())
+				assert.Nil(t, resp)
+				return
 			}
+
+			require.NoError(t, err)
+			result, ok := resp.(*orderv1.PayOrderResponse)
+			require.True(t, ok)
+			assert.Equal(t, tc.expected.resp.TransactionUUID, result.TransactionUUID)
 		})
 	}
 }

@@ -23,9 +23,9 @@ func ErrorInterceptor() grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case errors.Is(err, paymentErrors.ErrOrderUUIDIsEmpty):
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errors.Is(err, paymentErrors.ErrIncorrectOrderUUID):
-			return nil, status.Error(codes.InvalidArgument, err.Error())
 		case errors.Is(err, paymentErrors.ErrPaymentMethodUnspecified):
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		case errors.Is(err, paymentErrors.ErrIncorrectOrderUUID):
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		default:
 			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)

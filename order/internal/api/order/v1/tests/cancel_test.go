@@ -23,7 +23,7 @@ func TestCancelOrder(t *testing.T) {
 	}
 
 	type expected struct {
-		resp orderv1.CancelOrderRes
+		resp *orderv1.CancelOrderResponse
 		err  error
 	}
 
@@ -48,11 +48,10 @@ func TestCancelOrder(t *testing.T) {
 			},
 			expected: expected{
 				resp: &orderv1.CancelOrderResponse{},
-				err:  nil,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Cancel(ctx, orderUUID).
+					Cancel(ctx, orderUUID.String()).
 					Return(nil)
 			},
 		},
@@ -64,12 +63,11 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrOrderNotFound,
+				err: ordererrs.ErrOrderNotFound,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Cancel(ctx, orderUUID).
+					Cancel(ctx, orderUUID.String()).
 					Return(ordererrs.ErrOrderNotFound)
 			},
 		},
@@ -81,12 +79,11 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrOrderAlreadyPaid,
+				err: ordererrs.ErrOrderAlreadyPaid,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Cancel(ctx, orderUUID).
+					Cancel(ctx, orderUUID.String()).
 					Return(ordererrs.ErrOrderAlreadyPaid)
 			},
 		},
@@ -98,12 +95,11 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrOrderAlreadyCancelled,
+				err: ordererrs.ErrOrderAlreadyCancelled,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Cancel(ctx, orderUUID).
+					Cancel(ctx, orderUUID.String()).
 					Return(ordererrs.ErrOrderAlreadyCancelled)
 			},
 		},
@@ -115,12 +111,11 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  unexpectedErr,
+				err: unexpectedErr,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Cancel(ctx, orderUUID).
+					Cancel(ctx, orderUUID.String()).
 					Return(unexpectedErr)
 			},
 		},
@@ -139,12 +134,14 @@ func TestCancelOrder(t *testing.T) {
 			if tc.expected.err != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.expected.err)
-				assert.Empty(t, resp)
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, resp)
-				assert.IsType(t, &orderv1.CancelOrderResponse{}, resp)
+				assert.Nil(t, resp)
+				return
 			}
+
+			require.NoError(t, err)
+			result, ok := resp.(*orderv1.CancelOrderResponse)
+			require.True(t, ok)
+			assert.Equal(t, tc.expected.resp, result)
 		})
 	}
 }

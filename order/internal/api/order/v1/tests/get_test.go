@@ -25,21 +25,22 @@ func TestGetOrder(t *testing.T) {
 	}
 
 	type expected struct {
-		resp orderv1.GetOrderRes
+		resp *orderv1.OrderDto
 		err  error
 	}
 
 	var (
-		ctx             = context.Background()
-		orderUUID       = uuid.New()
-		hullUUID        = uuid.New()
-		engineUUID      = uuid.New()
-		shieldUUID      = uuid.New()
-		weaponUUID      = uuid.New()
-		transactionUUID = uuid.New()
-		paymentMethod   = model.PaymentMethodStringCard
-		now             = time.Date(2026, 4, 27, 12, 0, 0, 0, time.UTC)
-		unexpectedErr   = errors.New("внезапность")
+		ctx                = context.Background()
+		orderUUID          = uuid.New()
+		hullUUID           = uuid.New()
+		engineUUID         = uuid.New()
+		shieldUUID         = uuid.New()
+		weaponUUID         = uuid.New()
+		transactionUUID    = uuid.New()
+		transactionUUIDStr = transactionUUID.String()
+		paymentMethod      = model.PaymentMethodCard
+		now                = time.Date(2026, 4, 27, 12, 0, 0, 0, time.UTC)
+		unexpectedErr      = errors.New("внезапность")
 	)
 
 	tests := []struct {
@@ -68,19 +69,20 @@ func TestGetOrder(t *testing.T) {
 					Status:          orderv1.OrderStatusPAID,
 					CreatedAt:       now,
 				},
-				err: nil,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Get(ctx, orderUUID).
+					Get(ctx, orderUUID.String()).
 					Return(model.Order{
-						OrderUUID:       orderUUID,
-						HullUUID:        hullUUID,
-						EngineUUID:      engineUUID,
-						ShieldUUID:      &shieldUUID,
-						WeaponUUID:      &weaponUUID,
+						UUID: orderUUID.String(),
+						Items: []model.OrderItem{
+							{PartUuid: hullUUID.String(), PartType: model.PartTypeHull, Price: 100000},
+							{PartUuid: engineUUID.String(), PartType: model.PartTypeEngine, Price: 200000},
+							{PartUuid: shieldUUID.String(), PartType: model.PartTypeShield, Price: 300000},
+							{PartUuid: weaponUUID.String(), PartType: model.PartTypeWeapon, Price: 177000},
+						},
 						TotalPrice:      777000,
-						TransactionUUID: &transactionUUID,
+						TransactionUUID: &transactionUUIDStr,
 						PaymentMethod:   &paymentMethod,
 						Status:          model.OrderStatusPaid,
 						CreatedAt:       now,
@@ -95,12 +97,11 @@ func TestGetOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrOrderNotFound,
+				err: ordererrs.ErrOrderNotFound,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Get(ctx, orderUUID).
+					Get(ctx, orderUUID.String()).
 					Return(model.Order{}, ordererrs.ErrOrderNotFound)
 			},
 		},
@@ -112,12 +113,11 @@ func TestGetOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  unexpectedErr,
+				err: unexpectedErr,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Get(ctx, orderUUID).
+					Get(ctx, orderUUID.String()).
 					Return(model.Order{}, unexpectedErr)
 			},
 		},
@@ -136,25 +136,23 @@ func TestGetOrder(t *testing.T) {
 			if tc.expected.err != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.expected.err)
-				assert.Empty(t, resp)
-			} else {
-				require.NoError(t, err)
-				assert.NotEmpty(t, resp)
-				assert.IsType(t, &orderv1.OrderDto{}, resp)
-
-				dto, ok := resp.(*orderv1.OrderDto)
-				require.True(t, ok)
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetOrderUUID(), dto.GetOrderUUID())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetHullUUID(), dto.GetHullUUID())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetEngineUUID(), dto.GetEngineUUID())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetTotalPrice(), dto.GetTotalPrice())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetStatus(), dto.GetStatus())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetCreatedAt(), dto.GetCreatedAt())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetShieldUUID(), dto.GetShieldUUID())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetWeaponUUID(), dto.GetWeaponUUID())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetTransactionUUID(), dto.GetTransactionUUID())
-				assert.Equal(t, tc.expected.resp.(*orderv1.OrderDto).GetPaymentMethod(), dto.GetPaymentMethod())
+				assert.Nil(t, resp)
+				return
 			}
+
+			require.NoError(t, err)
+			dto, ok := resp.(*orderv1.OrderDto)
+			require.True(t, ok)
+			assert.Equal(t, tc.expected.resp.OrderUUID, dto.OrderUUID)
+			assert.Equal(t, tc.expected.resp.HullUUID, dto.HullUUID)
+			assert.Equal(t, tc.expected.resp.EngineUUID, dto.EngineUUID)
+			assert.Equal(t, tc.expected.resp.ShieldUUID, dto.ShieldUUID)
+			assert.Equal(t, tc.expected.resp.WeaponUUID, dto.WeaponUUID)
+			assert.Equal(t, tc.expected.resp.TotalPrice, dto.TotalPrice)
+			assert.Equal(t, tc.expected.resp.TransactionUUID, dto.TransactionUUID)
+			assert.Equal(t, tc.expected.resp.PaymentMethod, dto.PaymentMethod)
+			assert.Equal(t, tc.expected.resp.Status, dto.Status)
+			assert.Equal(t, tc.expected.resp.CreatedAt, dto.CreatedAt)
 		})
 	}
 }

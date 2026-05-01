@@ -18,8 +18,7 @@ func TestPayOrder(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		orderUUIDStr  string
-		paymentMethod model.PaymentMethod
+		req model.PayRequest
 	}
 
 	type expected struct {
@@ -27,10 +26,9 @@ func TestPayOrder(t *testing.T) {
 	}
 
 	var (
-		ctx              = context.Background()
-		orderUUID        = gofakeit.UUID()
-		invalidOrderUUID = "flsdpfkd"
-		emptyOrderUUID   = ""
+		ctx            = context.Background()
+		orderUUID      = gofakeit.UUID()
+		emptyOrderUUID = ""
 	)
 
 	tests := []struct {
@@ -42,8 +40,10 @@ func TestPayOrder(t *testing.T) {
 		{
 			name: "успешная оплата картой",
 			args: args{
-				orderUUIDStr:  orderUUID,
-				paymentMethod: model.PaymentMethodCard,
+				req: model.PayRequest{
+					OrderUUID:     orderUUID,
+					PaymentMethod: model.PaymentMethodCard,
+				},
 			},
 			expected: expected{
 				err: nil,
@@ -53,8 +53,10 @@ func TestPayOrder(t *testing.T) {
 		{
 			name: "успешная оплата СБП",
 			args: args{
-				orderUUIDStr:  orderUUID,
-				paymentMethod: model.PaymentMethodSBP,
+				req: model.PayRequest{
+					OrderUUID:     orderUUID,
+					PaymentMethod: model.PaymentMethodSBP,
+				},
 			},
 			expected: expected{
 				err: nil,
@@ -64,8 +66,10 @@ func TestPayOrder(t *testing.T) {
 		{
 			name: "успешная оплата кредитной картой",
 			args: args{
-				orderUUIDStr:  orderUUID,
-				paymentMethod: model.PaymentMethodCreditCard,
+				req: model.PayRequest{
+					OrderUUID:     orderUUID,
+					PaymentMethod: model.PaymentMethodCreditCard,
+				},
 			},
 			expected: expected{
 				err: nil,
@@ -75,8 +79,10 @@ func TestPayOrder(t *testing.T) {
 		{
 			name: "успешная оплата деньгами инвестора",
 			args: args{
-				orderUUIDStr:  orderUUID,
-				paymentMethod: model.PaymentMethodInvestorMoney,
+				req: model.PayRequest{
+					OrderUUID:     orderUUID,
+					PaymentMethod: model.PaymentMethodInvestorMoney,
+				},
 			},
 			expected: expected{
 				err: nil,
@@ -86,8 +92,10 @@ func TestPayOrder(t *testing.T) {
 		{
 			name: "ошибка: orderUUID пустой",
 			args: args{
-				orderUUIDStr:  emptyOrderUUID,
-				paymentMethod: model.PaymentMethodSBP,
+				req: model.PayRequest{
+					OrderUUID:     emptyOrderUUID,
+					PaymentMethod: model.PaymentMethodSBP,
+				},
 			},
 			expected: expected{
 				err: errs.ErrOrderUUIDIsEmpty,
@@ -95,24 +103,28 @@ func TestPayOrder(t *testing.T) {
 			setupMocks: func() {},
 		},
 		{
-			name: "ошибка: orderUUID невалидный",
+			name: "ошибка: метод оплаты неопределённый",
 			args: args{
-				orderUUIDStr:  invalidOrderUUID,
-				paymentMethod: model.PaymentMethodCreditCard,
+				req: model.PayRequest{
+					OrderUUID:     orderUUID,
+					PaymentMethod: model.PaymentMethodUnspecified,
+				},
 			},
 			expected: expected{
-				err: errs.ErrIncorrectOrderUUID,
+				err: errs.ErrPaymentMethodUnspecified,
 			},
 			setupMocks: func() {},
 		},
 		{
-			name: "ошибка: метод оплаты неопределённый",
+			name: "ошибка: идентификатор заказа невалидный",
 			args: args{
-				orderUUIDStr:  orderUUID,
-				paymentMethod: model.PaymentMethodUnspecified,
+				req: model.PayRequest{
+					OrderUUID:     "invalid!!!",
+					PaymentMethod: model.PaymentMethodSBP,
+				},
 			},
 			expected: expected{
-				err: errs.ErrPaymentMethodUnspecified,
+				err: errs.ErrIncorrectOrderUUID,
 			},
 			setupMocks: func() {},
 		},
@@ -124,7 +136,7 @@ func TestPayOrder(t *testing.T) {
 
 			svc := payment.New()
 
-			transactionStr, err := svc.PayOrder(ctx, tc.args.orderUUIDStr, tc.args.paymentMethod)
+			transactionStr, err := svc.PayOrder(ctx, tc.args.req)
 			if tc.expected.err != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.expected.err)

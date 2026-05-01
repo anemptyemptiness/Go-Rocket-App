@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,17 +25,17 @@ func TestCreateOrder(t *testing.T) {
 	}
 
 	type expected struct {
-		resp orderv1.CreateOrderRes
+		resp *orderv1.CreateOrderResponse
 		err  error
 	}
 
 	var (
 		ctx           = context.Background()
-		orderUUID     = uuid.New()
-		hullUUID      = uuid.New()
-		engineUUID    = uuid.New()
-		shieldUUID    = uuid.New()
-		weaponUUID    = uuid.New()
+		orderUUID     = gofakeit.UUID()
+		hullUUID      = gofakeit.UUID()
+		engineUUID    = gofakeit.UUID()
+		shieldUUID    = gofakeit.UUID()
+		weaponUUID    = gofakeit.UUID()
 		unexpectedErr = errors.New("неожиданность")
 	)
 
@@ -48,18 +49,17 @@ func TestCreateOrder(t *testing.T) {
 			name: "успешное создание заказа",
 			args: args{
 				req: &orderv1.CreateOrderRequest{
-					HullUUID:   hullUUID,
-					EngineUUID: engineUUID,
-					ShieldUUID: orderv1.NewOptNilUUID(shieldUUID),
-					WeaponUUID: orderv1.NewOptNilUUID(weaponUUID),
+					HullUUID:   uuid.MustParse(hullUUID),
+					EngineUUID: uuid.MustParse(engineUUID),
+					ShieldUUID: orderv1.NewOptNilUUID(uuid.MustParse(shieldUUID)),
+					WeaponUUID: orderv1.NewOptNilUUID(uuid.MustParse(weaponUUID)),
 				},
 			},
 			expected: expected{
 				resp: &orderv1.CreateOrderResponse{
-					OrderUUID:  orderUUID,
+					OrderUUID:  uuid.MustParse(orderUUID),
 					TotalPrice: 999000,
 				},
-				err: nil,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
@@ -70,7 +70,7 @@ func TestCreateOrder(t *testing.T) {
 						WeaponUUID: &weaponUUID,
 					}).
 					Return(model.Order{
-						OrderUUID:  orderUUID,
+						UUID:       orderUUID,
 						TotalPrice: 999000,
 					}, nil)
 			},
@@ -81,8 +81,7 @@ func TestCreateOrder(t *testing.T) {
 				req: nil,
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrEmptyRequest,
+				err: ordererrs.ErrEmptyRequest,
 			},
 			setupMock: func(svc *mocks.OrderService) {},
 		},
@@ -91,20 +90,17 @@ func TestCreateOrder(t *testing.T) {
 			args: args{
 				req: &orderv1.CreateOrderRequest{
 					HullUUID:   uuid.Nil,
-					EngineUUID: engineUUID,
+					EngineUUID: uuid.MustParse(engineUUID),
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrHullUUIDAndEngineUUIDAreRequired,
+				err: ordererrs.ErrHullUUIDAndEngineUUIDAreRequired,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Create(ctx, model.CreateOrderRequest{
-						HullUUID:   uuid.Nil,
+						HullUUID:   uuid.Nil.String(),
 						EngineUUID: engineUUID,
-						ShieldUUID: nil,
-						WeaponUUID: nil,
 					}).
 					Return(model.Order{}, ordererrs.ErrHullUUIDAndEngineUUIDAreRequired)
 			},
@@ -113,21 +109,18 @@ func TestCreateOrder(t *testing.T) {
 			name: "ошибка: деталь закончилась",
 			args: args{
 				req: &orderv1.CreateOrderRequest{
-					HullUUID:   hullUUID,
-					EngineUUID: engineUUID,
+					HullUUID:   uuid.MustParse(hullUUID),
+					EngineUUID: uuid.MustParse(engineUUID),
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrPartIsOver,
+				err: ordererrs.ErrPartIsOver,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Create(ctx, model.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
-						ShieldUUID: nil,
-						WeaponUUID: nil,
 					}).
 					Return(model.Order{}, ordererrs.ErrPartIsOver)
 			},
@@ -136,21 +129,18 @@ func TestCreateOrder(t *testing.T) {
 			name: "ошибка: inventory client not found",
 			args: args{
 				req: &orderv1.CreateOrderRequest{
-					HullUUID:   hullUUID,
-					EngineUUID: engineUUID,
+					HullUUID:   uuid.MustParse(hullUUID),
+					EngineUUID: uuid.MustParse(engineUUID),
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrInventoryClientNotFound,
+				err: ordererrs.ErrInventoryClientNotFound,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Create(ctx, model.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
-						ShieldUUID: nil,
-						WeaponUUID: nil,
 					}).
 					Return(model.Order{}, ordererrs.ErrInventoryClientNotFound)
 			},
@@ -159,21 +149,18 @@ func TestCreateOrder(t *testing.T) {
 			name: "ошибка: inventory client invalid argument",
 			args: args{
 				req: &orderv1.CreateOrderRequest{
-					HullUUID:   hullUUID,
-					EngineUUID: engineUUID,
+					HullUUID:   uuid.MustParse(hullUUID),
+					EngineUUID: uuid.MustParse(engineUUID),
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  ordererrs.ErrInventoryClientInvalidArgument,
+				err: ordererrs.ErrInventoryClientInvalidArgument,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Create(ctx, model.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
-						ShieldUUID: nil,
-						WeaponUUID: nil,
 					}).
 					Return(model.Order{}, ordererrs.ErrInventoryClientInvalidArgument)
 			},
@@ -182,21 +169,18 @@ func TestCreateOrder(t *testing.T) {
 			name: "ошибка: внутренняя ошибка",
 			args: args{
 				req: &orderv1.CreateOrderRequest{
-					HullUUID:   hullUUID,
-					EngineUUID: engineUUID,
+					HullUUID:   uuid.MustParse(hullUUID),
+					EngineUUID: uuid.MustParse(engineUUID),
 				},
 			},
 			expected: expected{
-				resp: nil,
-				err:  unexpectedErr,
+				err: unexpectedErr,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Create(ctx, model.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
-						ShieldUUID: nil,
-						WeaponUUID: nil,
 					}).
 					Return(model.Order{}, unexpectedErr)
 			},
@@ -216,17 +200,15 @@ func TestCreateOrder(t *testing.T) {
 			if tc.expected.err != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.expected.err)
-				assert.Empty(t, resp)
-			} else {
-				require.NoError(t, err)
-				assert.NotEmpty(t, resp)
-				assert.IsType(t, &orderv1.CreateOrderResponse{}, resp)
-
-				result, ok := resp.(*orderv1.CreateOrderResponse)
-				require.True(t, ok)
-				assert.Equal(t, tc.expected.resp.(*orderv1.CreateOrderResponse).GetOrderUUID(), result.GetOrderUUID())
-				assert.Equal(t, tc.expected.resp.(*orderv1.CreateOrderResponse).GetTotalPrice(), result.GetTotalPrice())
+				assert.Nil(t, resp)
+				return
 			}
+
+			require.NoError(t, err)
+			result, ok := resp.(*orderv1.CreateOrderResponse)
+			require.True(t, ok)
+			assert.Equal(t, tc.expected.resp.OrderUUID, result.OrderUUID)
+			assert.Equal(t, tc.expected.resp.TotalPrice, result.TotalPrice)
 		})
 	}
 }

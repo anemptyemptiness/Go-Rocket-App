@@ -3,30 +3,74 @@ package order
 import (
 	"context"
 
+	"github.com/huandu/go-sqlbuilder"
+
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
-	repoConverter "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/converter"
 )
 
-func (r *repository) Create(_ context.Context, order model.Order) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *repository) Create(ctx context.Context, order model.Order) (string, error) {
+	const queryCreateOrder = `
+		INSERT INTO orders (total_price, "status", payment_method)
+		VALUES ($1, $2, $3) RETURNING uuid;`
 
-	r.orders[order.OrderUUID] = repoConverter.OrderModelToRecord(order)
-
-	return nil
-}
-
-func (r *repository) Update(_ context.Context, order model.Order) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	_, ok := r.orders[order.OrderUUID]
-	if !ok {
-		return errs.ErrOrderNotFound
+	var uuid string
+	err := r.getter.DefaultTrOrDB(ctx, r.pool).QueryRow(
+		ctx, queryCreateOrder,
+		order.TotalPrice,
+		order.Status,
+		order.PaymentMethod,
+	).Scan(&uuid)
+	if err != nil {
+		return "", err
 	}
 
-	r.orders[order.OrderUUID] = repoConverter.OrderModelToRecord(order)
+	builder := sqlbuilder.NewInsertBuilder()
+	builder.InsertInto("order_items").Cols("order_uuid", "part_uuid", "part_type", "price")
+
+	for _, item := range order.Items {
+		builder.Values(
+			uuid,
+			item.PartUuid,
+			item.PartType,
+			item.Price,
+		)
+	}
+
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	_, err = r.getter.DefaultTrOrDB(ctx, r.pool).Exec(ctx, query, args...)
+	if err != nil {
+		return "", err
+	}
+
+	return uuid, nil
+}
+
+func (r *repository) Update(ctx context.Context, order model.Order) error {
+	const query = `
+		UPDATE orders
+		SET
+		    total_price = COALESCE($2, total_price),
+		    "status" = COALESCE($3, "status"),
+		    transaction_uuid = COALESCE($4, transaction_uuid),
+		    payment_method = COALESCE($5, payment_method),
+		    updated_at = NOW()
+		WHERE uuid = $1;`
+
+	tag, err := r.getter.DefaultTrOrDB(ctx, r.pool).Exec(
+		ctx, query,
+		order.UUID,
+		order.TotalPrice,
+		order.Status,
+		order.TransactionUUID,
+		order.PaymentMethod,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return errs.ErrOrderNotFound
+	}
 
 	return nil
 }

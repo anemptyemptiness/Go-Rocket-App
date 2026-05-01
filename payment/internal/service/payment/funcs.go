@@ -10,24 +10,24 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/model"
 )
 
-func (s *service) PayOrder(_ context.Context, orderUUIDStr string, paymentMethod model.PaymentMethod) (string, error) {
-	if orderUUIDStr == "" {
+func (s *service) PayOrder(_ context.Context, req model.PayRequest) (string, error) {
+	if req.OrderUUID == "" {
 		return "", errs.ErrOrderUUIDIsEmpty
 	}
 
-	orderUUID, err := uuid.Parse(orderUUIDStr)
-	if err != nil {
+	orderUuid, err := uuid.Parse(req.OrderUUID)
+	if err != nil || orderUuid == uuid.Nil {
 		return "", errs.ErrIncorrectOrderUUID
 	}
 
-	if paymentMethod == model.PaymentMethodUnspecified {
+	if req.PaymentMethod == model.PaymentMethodUnspecified {
 		return "", errs.ErrPaymentMethodUnspecified
 	}
 
 	transactionUUID := uuid.New()
 
 	slog.Info("оплата прошла успешно",
-		"order_uuid", orderUUID,
+		"order_uuid", req.OrderUUID,
 		"transaction_uuid", transactionUUID.String(),
 	)
 

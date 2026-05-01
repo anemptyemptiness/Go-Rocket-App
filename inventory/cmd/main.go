@@ -9,15 +9,15 @@ import (
 	"syscall"
 	"time"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
-	inventoryRepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
-	inventoryService "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part"
-	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
 )
 
 const (
@@ -34,6 +34,7 @@ const (
 )
 
 func main() {
+	ctx := context.Background()
 	lc := net.ListenConfig{}
 
 	lis, err := lc.Listen(context.Background(), "tcp", grpcAddress)
@@ -59,11 +60,28 @@ func main() {
 		),
 	)
 
-	repo := inventoryRepo.New()
-	service := inventoryService.New(repo)
-	api := apiv1.New(service)
+	// DSN берём из order.env / inventory.env (пока хардкодим в main.go, конфиги — неделя 4)
+	pool, err := pgxpool.New(ctx, "postgres://inventory-service-user:inventory-service-password@localhost:5433/inventory-service?sslmode=disable")
+	if err != nil {
+		slog.Error("создание пула соединений", "error", err)
+	}
+	defer pool.Close()
 
-	inventoryv1.RegisterInventoryServiceServer(grpcServer, api)
+	// Проверяем соединение
+	err = pool.Ping(ctx)
+	if err != nil {
+		slog.Error("проверка соединения с БД", "error", err)
+	}
+
+	slog.Info("подключение к PostgreSQL установлено")
+
+	// Создаём Transaction Manager для pgx
+	txManager, err := manager.New(trmpgx.NewDefaultFactory(pool))
+	if err != nil {
+		slog.Error("создание transaction manager", "error", err)
+	}
+
+	app.RegisterServices(grpcServer, pool, txManager)
 
 	// Включаем reflection для postman/grpcurl
 	reflection.Register(grpcServer)

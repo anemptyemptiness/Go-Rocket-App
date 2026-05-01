@@ -6,126 +6,106 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	ordererrs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
+	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
-	ordersvc "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
+	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
 )
 
-func TestGet(t *testing.T) {
+func TestGet_Success(t *testing.T) {
 	t.Parallel()
 
-	type args struct {
-		orderUUID uuid.UUID
-	}
+	var (
+		ctx       = context.Background()
+		orderUUID = gofakeit.UUID()
+	)
 
-	type expected struct {
-		order   model.Order
-		wantErr error
-	}
+	repo := mocks.NewOrderRepository(t)
+	inventoryClient := mocks.NewInventoryClient(t)
+	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	repo.EXPECT().
+		Get(ctx, orderUUID).
+		Return(model.Order{
+			UUID: orderUUID,
+			Items: []model.OrderItem{
+				{
+					Uuid:      gofakeit.UUID(),
+					OrderUuid: orderUUID,
+					PartUuid:  gofakeit.UUID(),
+					PartType:  model.PartTypeWeapon,
+					Price:     10000,
+					CreatedAt: time.Now(),
+				},
+			},
+			TotalPrice: 10000,
+			Status:     model.OrderStatusPendingPayment,
+			CreatedAt:  time.Now(),
+		}, nil)
+
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+
+	order, err := svc.Get(ctx, orderUUID)
+	require.NoError(t, err)
+	assert.Equal(t, orderUUID, order.UUID)
+	assert.Equal(t, int64(10000), order.TotalPrice)
+	assert.Equal(t, model.OrderStatusPendingPayment, order.Status)
+	assert.Len(t, order.Items, 1)
+	assert.NotEmpty(t, order.Items[0].Uuid)
+}
+
+func TestGet_NotFound(t *testing.T) {
+	t.Parallel()
+
+	var (
+		ctx       = context.Background()
+		orderUUID = gofakeit.UUID()
+	)
+
+	repo := mocks.NewOrderRepository(t)
+	inventoryClient := mocks.NewInventoryClient(t)
+	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	repo.EXPECT().
+		Get(ctx, orderUUID).
+		Return(model.Order{}, errs.ErrOrderNotFound)
+
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+
+	order, err := svc.Get(ctx, orderUUID)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errs.ErrOrderNotFound)
+	assert.Empty(t, order)
+}
+
+func TestGet_RepoError(t *testing.T) {
+	t.Parallel()
 
 	var (
 		ctx           = context.Background()
-		orderUUID     = uuid.New()
-		hullUUID      = uuid.New()
-		engineUUID    = uuid.New()
-		unexpectedErr = errors.New("внезапность")
-		now           = time.Date(2026, 4, 27, 12, 0, 0, 0, time.UTC)
+		orderUUID     = gofakeit.UUID()
+		unexpectedErr = errors.New("unexpected error")
 	)
 
-	tests := []struct {
-		name      string
-		args      args
-		expected  expected
-		setupMock func(repo *mocks.OrderRepository)
-	}{
-		{
-			name: "успешное получение заказа",
-			args: args{
-				orderUUID: orderUUID,
-			},
-			expected: expected{
-				order: model.Order{
-					OrderUUID:  orderUUID,
-					HullUUID:   hullUUID,
-					EngineUUID: engineUUID,
-					TotalPrice: 800000,
-					Status:     model.OrderStatusPendingPayment,
-					CreatedAt:  now,
-				},
-				wantErr: nil,
-			},
-			setupMock: func(repo *mocks.OrderRepository) {
-				repo.EXPECT().
-					Get(ctx, orderUUID).
-					Return(model.Order{
-						OrderUUID:  orderUUID,
-						HullUUID:   hullUUID,
-						EngineUUID: engineUUID,
-						TotalPrice: 800000,
-						Status:     model.OrderStatusPendingPayment,
-						CreatedAt:  now,
-					}, nil)
-			},
-		},
-		{
-			name: "ошибка: заказ не найден",
-			args: args{
-				orderUUID: orderUUID,
-			},
-			expected: expected{
-				order:   model.Order{},
-				wantErr: ordererrs.ErrOrderNotFound,
-			},
-			setupMock: func(repo *mocks.OrderRepository) {
-				repo.EXPECT().
-					Get(ctx, orderUUID).
-					Return(model.Order{}, ordererrs.ErrOrderNotFound)
-			},
-		},
-		{
-			name: "ошибка: внутренняя ошибка репозитория",
-			args: args{
-				orderUUID: orderUUID,
-			},
-			expected: expected{
-				order:   model.Order{},
-				wantErr: unexpectedErr,
-			},
-			setupMock: func(repo *mocks.OrderRepository) {
-				repo.EXPECT().
-					Get(ctx, orderUUID).
-					Return(model.Order{}, unexpectedErr)
-			},
-		},
-	}
+	repo := mocks.NewOrderRepository(t)
+	inventoryClient := mocks.NewInventoryClient(t)
+	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	repo.EXPECT().
+		Get(ctx, orderUUID).
+		Return(model.Order{}, unexpectedErr)
 
-			repo := mocks.NewOrderRepository(t)
-			tc.setupMock(repo)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-			paymentClient := mocks.NewPaymentClient(t)
-			inventoryClient := mocks.NewInventoryClient(t)
-			svc := ordersvc.New(repo, paymentClient, inventoryClient)
-
-			resp, err := svc.Get(ctx, tc.args.orderUUID)
-			if tc.expected.wantErr != nil {
-				require.Error(t, err)
-				assert.ErrorIs(t, err, tc.expected.wantErr)
-				assert.Empty(t, resp)
-			} else {
-				require.NoError(t, err)
-				assert.NotEmpty(t, resp)
-				assert.IsType(t, model.Order{}, resp)
-				assert.Equal(t, tc.expected.order, resp)
-			}
-		})
-	}
+	order, err := svc.Get(ctx, orderUUID)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, unexpectedErr)
+	assert.Empty(t, order)
 }

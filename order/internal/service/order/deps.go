@@ -3,21 +3,23 @@ package order
 import (
 	"context"
 
-	"github.com/google/uuid"
-
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 )
 
 type OrderRepository interface {
-	Get(ctx context.Context, orderUUID uuid.UUID) (model.Order, error)
-	Create(ctx context.Context, order model.Order) error
+	Create(ctx context.Context, order model.Order) (string, error)
+	Get(ctx context.Context, orderUUID string) (model.Order, error)
 	Update(ctx context.Context, order model.Order) error
 }
 
 type InventoryClient interface {
-	ListParts(ctx context.Context, uuids []uuid.UUID) ([]model.Part, error)
+	ListParts(ctx context.Context, uuids []string) ([]model.Part, error)
 }
 
 type PaymentClient interface {
-	PayOrder(ctx context.Context, orderUUID uuid.UUID, method model.PaymentMethodString) (uuid.UUID, error)
+	PayOrder(ctx context.Context, orderUUID string, method model.PaymentMethod) (string, error)
+}
+
+type TxManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) error
 }

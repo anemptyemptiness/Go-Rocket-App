@@ -25,7 +25,7 @@ func ErrorInterceptor() grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.NotFound, err.Error())
 		case errors.Is(err, inventoryErrors.ErrPartUUIDIsEmpty):
 			return nil, status.Error(codes.InvalidArgument, err.Error())
-		case errors.Is(err, inventoryErrors.ErrIncorrectPartUUID):
+		case errors.Is(err, inventoryErrors.ErrPartUUIDInvalid):
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		default:
 			return nil, status.Errorf(codes.Internal, "внутренняя ошибка: %v", err)

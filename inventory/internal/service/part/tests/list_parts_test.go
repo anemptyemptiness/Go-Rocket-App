@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -20,8 +19,7 @@ func TestListParts(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		uuids    []string
-		partType model.PartType
+		filter model.PartFilter
 	}
 
 	type expected struct {
@@ -32,11 +30,10 @@ func TestListParts(t *testing.T) {
 	var (
 		ctx = context.Background()
 
-		hullUUID            = gofakeit.UUID()
-		engineUUID          = gofakeit.UUID()
-		engineUUIDIncorrect = "f[as[a[rwlpwl"
-		shieldUUID          = gofakeit.UUID()
-		weaponUUID          = gofakeit.UUID()
+		hullUUID   = gofakeit.UUID()
+		engineUUID = gofakeit.UUID()
+		shieldUUID = gofakeit.UUID()
+		weaponUUID = gofakeit.UUID()
 
 		now = time.Now()
 	)
@@ -50,8 +47,10 @@ func TestListParts(t *testing.T) {
 		{
 			name: "успешное получение списка деталей",
 			args: args{
-				uuids:    []string{hullUUID, engineUUID, shieldUUID, weaponUUID},
-				partType: model.PartTypeUnspecified,
+				filter: model.PartFilter{
+					Uuids:    []string{hullUUID, engineUUID, shieldUUID, weaponUUID},
+					PartType: model.PartTypeUnspecified,
+				},
 			},
 			expected: expected{
 				parts: []model.Part{
@@ -96,12 +95,10 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
-					ListParts(ctx, []uuid.UUID{
-						uuid.MustParse(hullUUID),
-						uuid.MustParse(engineUUID),
-						uuid.MustParse(shieldUUID),
-						uuid.MustParse(weaponUUID),
-					}, model.PartTypeUnspecified).
+					ListParts(ctx, model.PartFilter{
+						Uuids:    []string{hullUUID, engineUUID, shieldUUID, weaponUUID},
+						PartType: model.PartTypeUnspecified,
+					}).
 					Return([]model.Part{
 						{
 							UUID:          hullUUID,
@@ -143,22 +140,12 @@ func TestListParts(t *testing.T) {
 			},
 		},
 		{
-			name: "ошибка: UUID детали некорректный",
-			args: args{
-				uuids:    []string{weaponUUID, engineUUIDIncorrect},
-				partType: model.PartTypeUnspecified,
-			},
-			expected: expected{
-				parts:   nil,
-				wantErr: errs.ErrIncorrectPartUUID,
-			},
-			setupMock: func(repo *mocks.Repository) {},
-		},
-		{
 			name: "ошибка: репозиторий не нашел деталь",
 			args: args{
-				uuids:    []string{shieldUUID, hullUUID},
-				partType: model.PartTypeUnspecified,
+				filter: model.PartFilter{
+					Uuids:    []string{shieldUUID, hullUUID},
+					PartType: model.PartTypeUnspecified,
+				},
 			},
 			expected: expected{
 				parts:   nil,
@@ -166,10 +153,10 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
-					ListParts(ctx, []uuid.UUID{
-						uuid.MustParse(shieldUUID),
-						uuid.MustParse(hullUUID),
-					}, model.PartTypeUnspecified).
+					ListParts(ctx, model.PartFilter{
+						Uuids:    []string{shieldUUID, hullUUID},
+						PartType: model.PartTypeUnspecified,
+					}).
 					Return(nil, errs.ErrPartNotFound)
 			},
 		},
@@ -182,9 +169,9 @@ func TestListParts(t *testing.T) {
 			repo := mocks.NewRepository(t)
 			tc.setupMock(repo)
 
-			svc := inventorysvc.New(repo)
+			svc := inventorysvc.New(repo, nil)
 
-			resp, err := svc.ListParts(ctx, tc.args.uuids, tc.args.partType)
+			resp, err := svc.ListParts(ctx, tc.args.filter)
 			if tc.expected.wantErr != nil {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, tc.expected.wantErr)
