@@ -3,6 +3,8 @@ package part
 import (
 	"context"
 	"fmt"
+	"slices"
+	"sort"
 
 	"github.com/google/uuid"
 
@@ -43,9 +45,30 @@ func (s *service) ListParts(ctx context.Context, filter model.PartFilter) ([]mod
 		return nil, fmt.Errorf("получить список деталей: %w", err)
 	}
 
-	if len(filter.Uuids) > 0 && len(parts) != len(filter.Uuids) {
-		return nil, errs.ErrPartNotFound
+	respParts := make([]model.Part, 0)
+	if len(filter.Uuids) != 0 {
+		for _, part := range parts {
+			if slices.Contains(filter.Uuids, part.UUID) {
+				respParts = append(respParts, part)
+			}
+		}
+
+		if len(respParts) != len(filter.Uuids) {
+			return nil, errs.ErrPartNotFound
+		}
+
+		return respParts, nil
 	}
 
-	return parts, nil
+	for _, part := range parts {
+		if filter.PartType == model.PartTypeUnspecified || part.PartType == filter.PartType {
+			respParts = append(respParts, part)
+		}
+	}
+
+	sort.Slice(respParts, func(i, j int) bool {
+		return respParts[i].Name < respParts[j].Name
+	})
+
+	return respParts, nil
 }

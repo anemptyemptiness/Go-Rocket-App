@@ -61,18 +61,9 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 			p.price,
 			p.stock_quantity,
 			p.created_at
-		FROM parts AS p
-		WHERE (CARDINALITY($1::UUID[]) != 0 AND p.uuid = ANY($1))
-			OR (CARDINALITY($1::UUID[]) = 0 AND ($2 = 'UNSPECIFIED' OR p.part_type = $2))
-		ORDER BY
-		    CASE 
-		        WHEN CARDINALITY($1::UUID[]) = 0 THEN p.name 
-		    END,
-			CASE
-			    WHEN CARDINALITY($1::UUID[]) != 0 THEN ARRAY_POSITION($1::UUID[], p.uuid)
-			END;`
+		FROM parts AS p;`
 
-	rows, err = r.getter.DefaultTrOrDB(ctx, r.pool).Query(ctx, query, filter.Uuids, filter.PartType)
+	rows, err = r.getter.DefaultTrOrDB(ctx, r.pool).Query(ctx, query)
 	if err != nil {
 		return nil, handleError(err)
 	}

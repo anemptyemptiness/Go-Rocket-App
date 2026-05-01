@@ -1565,6 +1565,6 @@ func TestOrder_Create_DuplicateUUID_HullAndEngine(t *testing.T) {
 	result, resp := createOrder(t, req)
 	defer func() { _ = resp.Body.Close() }()
 
-	testutil.AssertHTTPStatus(t, resp, http.StatusNotFound)
-	require.Nil(t, result)
+	testutil.AssertHTTPStatus(t, resp, http.StatusCreated)
+	require.Equal(t, result.TotalPrice, int64(HullAluminumPrice*2))
 }
