@@ -64,12 +64,12 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 	}
 	defer rows.Close()
 
-	parts, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.Part])
+	parts, err := pgx.CollectRows(rows, pgx.RowToStructByName[record.Part])
 	if err != nil {
 		return nil, err
 	}
 
-	return parts, nil
+	return repoConverter.PartsRecordToModel(parts), nil
 }
 
 func handleError(err error) error {
