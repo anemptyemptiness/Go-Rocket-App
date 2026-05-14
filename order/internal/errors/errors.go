@@ -16,12 +16,5 @@ var (
 	ErrOrderStatusIncorrect             = errors.New("некорректный статус заказа")
 	ErrOrderAlreadyPaid                 = errors.New("заказ уже оплачен")
 	ErrOrderAlreadyCancelled            = errors.New("заказ уже отменён")
-	ErrInvalidOrderUUID                 = errors.New("идентификатор заказа невалидный")
-
-	// Payment Client Errors.
-	ErrPaymentClientInvalidArgument = errors.New("некорректный(ые) параметр(ы)")
-
-	// Inventory Client Errors.
-	ErrInventoryClientInvalidArgument = errors.New("некорректный(ые) параметр(ы)")
-	ErrInventoryClientNotFound        = errors.New("элемент(ы) не найден(ы)")
+	ErrInvalidPartUUID                  = errors.New("идентификатор детали невалидный")
 )

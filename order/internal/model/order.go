@@ -32,8 +32,24 @@ type Order struct {
 	CreatedAt       time.Time
 }
 
+func (o *Order) SetStatus(status OrderStatus) {
+	o.Status = status
+}
+
+func (o *Order) SetID(id string) {
+	o.UUID = id
+}
+
+func (o *Order) SetTransactionID(transactionID string) {
+	o.TransactionUUID = &transactionID
+}
+
+func (o *Order) SetPaymentMethod(method PaymentMethod) {
+	o.PaymentMethod = &method
+}
+
 type OrderItem struct {
-	Uuid      string
+	UUID      string
 	OrderUuid string
 	PartUuid  string
 	PartType  PartType

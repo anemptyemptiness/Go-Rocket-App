@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -27,7 +26,6 @@ func TestGet_Success(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
-	txManager := mocks.NewTxManager(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -35,7 +33,7 @@ func TestGet_Success(t *testing.T) {
 			UUID: orderUUID,
 			Items: []model.OrderItem{
 				{
-					Uuid:      gofakeit.UUID(),
+					UUID:      gofakeit.UUID(),
 					OrderUuid: orderUUID,
 					PartUuid:  gofakeit.UUID(),
 					PartType:  model.PartTypeWeapon,
@@ -48,7 +46,7 @@ func TestGet_Success(t *testing.T) {
 			CreatedAt:  time.Now(),
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Get(ctx, orderUUID)
 	require.NoError(t, err)
@@ -56,7 +54,7 @@ func TestGet_Success(t *testing.T) {
 	assert.Equal(t, int64(10000), order.TotalPrice)
 	assert.Equal(t, model.OrderStatusPendingPayment, order.Status)
 	assert.Len(t, order.Items, 1)
-	assert.NotEmpty(t, order.Items[0].Uuid)
+	assert.NotEmpty(t, order.Items[0].UUID)
 }
 
 func TestGet_NotFound(t *testing.T) {
@@ -70,13 +68,12 @@ func TestGet_NotFound(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
-	txManager := mocks.NewTxManager(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
 		Return(model.Order{}, errs.ErrOrderNotFound)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Get(ctx, orderUUID)
 	require.Error(t, err)
@@ -90,19 +87,18 @@ func TestGet_RepoError(t *testing.T) {
 	var (
 		ctx           = context.Background()
 		orderUUID     = gofakeit.UUID()
-		unexpectedErr = errors.New("unexpected error")
+		unexpectedErr = assert.AnError
 	)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
-	txManager := mocks.NewTxManager(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
 		Return(model.Order{}, unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Get(ctx, orderUUID)
 	require.Error(t, err)

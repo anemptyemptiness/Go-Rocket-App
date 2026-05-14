@@ -8,20 +8,21 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/model"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
 func (s *service) PayOrder(_ context.Context, req model.PayRequest) (string, error) {
 	if req.OrderUUID == "" {
-		return "", errs.ErrOrderUUIDIsEmpty
+		return "", pkgerr.InvalidArgument(errs.ErrOrderUUIDIsEmpty)
 	}
 
 	orderUuid, err := uuid.Parse(req.OrderUUID)
 	if err != nil || orderUuid == uuid.Nil {
-		return "", errs.ErrIncorrectOrderUUID
+		return "", pkgerr.InvalidArgument(errs.ErrIncorrectOrderUUID)
 	}
 
 	if req.PaymentMethod == model.PaymentMethodUnspecified {
-		return "", errs.ErrPaymentMethodUnspecified
+		return "", pkgerr.InvalidArgument(errs.ErrPaymentMethodUnspecified)
 	}
 
 	transactionUUID := uuid.New()

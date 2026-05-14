@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
@@ -10,27 +11,56 @@ import (
 )
 
 func (r *repository) Create(ctx context.Context, order model.Order) (string, error) {
-	const queryCreateOrder = `
-		INSERT INTO orders (total_price, "status", payment_method)
-		VALUES ($1, $2, $3) RETURNING uuid;`
+	txErr := r.txManager.Do(ctx, func(txCtx context.Context) error {
+		orderUUID, err := r.createOrder(txCtx, order)
+		if err != nil {
+			return err
+		}
 
-	var uuid string
-	err := r.getter.DefaultTrOrDB(ctx, r.pool).QueryRow(
-		ctx, queryCreateOrder,
-		order.TotalPrice,
-		order.Status,
-		order.PaymentMethod,
-	).Scan(&uuid)
+		order.UUID = orderUUID
+
+		err = r.createOrderItems(txCtx, order)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if txErr != nil {
+		return "", txErr
+	}
+
+	return order.UUID, nil
+}
+
+func (r *repository) createOrder(ctx context.Context, order model.Order) (string, error) {
+	orderUUID := uuid.New()
+
+	builder := sqlbuilder.NewInsertBuilder()
+	builder.InsertInto("orders").Cols("uuid", "total_price", "status", "payment_method")
+	builder.Values(order.TotalPrice, order.Status, order.PaymentMethod)
+
+	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
+
+	_, err := r.getter.DefaultTrOrDB(ctx, r.pool).Exec(
+		ctx, query,
+		args...,
+	)
 	if err != nil {
 		return "", err
 	}
 
+	return orderUUID.String(), nil
+}
+
+func (r *repository) createOrderItems(ctx context.Context, order model.Order) error {
 	builder := sqlbuilder.NewInsertBuilder()
-	builder.InsertInto("order_items").Cols("order_uuid", "part_uuid", "part_type", "price")
+	builder.InsertInto("order_items").Cols("uuid", "order_uuid", "part_uuid", "part_type", "price")
 
 	for _, item := range order.Items {
 		builder.Values(
-			uuid,
+			uuid.New(),
+			order.UUID,
 			item.PartUuid,
 			item.PartType,
 			item.Price,
@@ -38,12 +68,12 @@ func (r *repository) Create(ctx context.Context, order model.Order) (string, err
 	}
 
 	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
-	_, err = r.getter.DefaultTrOrDB(ctx, r.pool).Exec(ctx, query, args...)
+	_, err := r.getter.DefaultTrOrDB(ctx, r.pool).Exec(ctx, query, args...)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return uuid, nil
+	return nil
 }
 
 func (r *repository) Update(ctx context.Context, order model.Order) error {

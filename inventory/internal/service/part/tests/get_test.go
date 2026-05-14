@@ -106,7 +106,7 @@ func TestGetPart(t *testing.T) {
 			repo := mocks.NewRepository(t)
 			tc.setupMock(repo)
 
-			svc := inventorysvc.New(repo, nil)
+			svc := inventorysvc.New(repo)
 
 			resp, err := svc.GetPart(ctx, tc.args.uuidStr)
 			if tc.expected.wantErr != nil {

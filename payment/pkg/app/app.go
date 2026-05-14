@@ -1,11 +1,13 @@
 package app
 
 import (
+	"log/slog"
+
 	"google.golang.org/grpc"
 
 	paymentapi "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1"
-	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/interceptor"
 	paymentsvc "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
@@ -18,7 +20,7 @@ func RegisterServices(grpcServer *grpc.Server) {
 func Interceptors() []grpc.ServerOption {
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
-			interceptor.ErrorInterceptor(),
+			pkgerr.UnaryErrorInterceptor(slog.Default()),
 		),
 	}
 

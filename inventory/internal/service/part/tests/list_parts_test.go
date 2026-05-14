@@ -48,7 +48,7 @@ func TestListParts(t *testing.T) {
 			name: "успешное получение списка деталей",
 			args: args{
 				filter: model.PartFilter{
-					Uuids:    []string{hullUUID, engineUUID, shieldUUID, weaponUUID},
+					UUIDs:    []string{hullUUID, engineUUID, shieldUUID, weaponUUID},
 					PartType: model.PartTypeUnspecified,
 				},
 			},
@@ -96,7 +96,7 @@ func TestListParts(t *testing.T) {
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
 					ListParts(ctx, model.PartFilter{
-						Uuids:    []string{hullUUID, engineUUID, shieldUUID, weaponUUID},
+						UUIDs:    []string{hullUUID, engineUUID, shieldUUID, weaponUUID},
 						PartType: model.PartTypeUnspecified,
 					}).
 					Return([]model.Part{
@@ -143,7 +143,7 @@ func TestListParts(t *testing.T) {
 			name: "ошибка: репозиторий не нашел деталь",
 			args: args{
 				filter: model.PartFilter{
-					Uuids:    []string{shieldUUID, hullUUID},
+					UUIDs:    []string{shieldUUID, hullUUID},
 					PartType: model.PartTypeUnspecified,
 				},
 			},
@@ -154,7 +154,7 @@ func TestListParts(t *testing.T) {
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
 					ListParts(ctx, model.PartFilter{
-						Uuids:    []string{shieldUUID, hullUUID},
+						UUIDs:    []string{shieldUUID, hullUUID},
 						PartType: model.PartTypeUnspecified,
 					}).
 					Return(nil, errs.ErrPartNotFound)
@@ -169,7 +169,7 @@ func TestListParts(t *testing.T) {
 			repo := mocks.NewRepository(t)
 			tc.setupMock(repo)
 
-			svc := inventorysvc.New(repo, nil)
+			svc := inventorysvc.New(repo)
 
 			resp, err := svc.ListParts(ctx, tc.args.filter)
 			if tc.expected.wantErr != nil {

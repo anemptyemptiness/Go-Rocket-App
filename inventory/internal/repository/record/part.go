@@ -4,14 +4,6 @@ import "time"
 
 type PartType string
 
-const (
-	PartTypeUnspecified PartType = "UNSPECIFIED"
-	PartTypeHull        PartType = "HULL"
-	PartTypeEngine      PartType = "ENGINE"
-	PartTypeShield      PartType = "SHIELD"
-	PartTypeWeapon      PartType = "WEAPON"
-)
-
 type Part struct {
 	UUID          string    `db:"uuid"`
 	Name          string    `db:"name"`

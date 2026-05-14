@@ -2,11 +2,11 @@ package tests
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -36,7 +36,7 @@ func TestGetPart(t *testing.T) {
 		hullUUID      = gofakeit.UUID()
 		hullUUIDEmpty = ""
 
-		internalError = errors.New("внезапность")
+		internalError = assert.AnError
 
 		now = time.Now()
 	)
@@ -142,6 +142,23 @@ func TestGetPart(t *testing.T) {
 				svc.EXPECT().
 					GetPart(ctx, hullUUID).
 					Return(model.Part{}, internalError)
+			},
+		},
+		{
+			name: "ошибка: идентификатор детали невалидный",
+			args: args{
+				req: &inventoryv1.GetPartRequest{
+					Uuid: uuid.Nil.String(),
+				},
+			},
+			expected: expected{
+				resp:    nil,
+				wantErr: errs.ErrPartUUIDInvalid,
+			},
+			setupMock: func(svc *mocks.InventoryService) {
+				svc.EXPECT().
+					GetPart(ctx, uuid.Nil.String()).
+					Return(model.Part{}, errs.ErrPartUUIDInvalid)
 			},
 		},
 	}

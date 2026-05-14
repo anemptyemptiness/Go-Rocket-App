@@ -2,7 +2,7 @@ package tests
 
 import (
 	"context"
-	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -14,6 +14,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1/mocks"
 	ordererrs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
 
@@ -25,8 +26,8 @@ func TestGetOrder(t *testing.T) {
 	}
 
 	type expected struct {
-		resp *orderv1.OrderDto
-		err  error
+		res     orderv1.GetOrderRes
+		wantErr bool
 	}
 
 	var (
@@ -40,7 +41,7 @@ func TestGetOrder(t *testing.T) {
 		transactionUUIDStr = transactionUUID.String()
 		paymentMethod      = model.PaymentMethodCard
 		now                = time.Date(2026, 4, 27, 12, 0, 0, 0, time.UTC)
-		unexpectedErr      = errors.New("внезапность")
+		unexpectedErr      = assert.AnError
 	)
 
 	tests := []struct {
@@ -57,7 +58,7 @@ func TestGetOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: &orderv1.OrderDto{
+				res: &orderv1.OrderDto{
 					OrderUUID:       orderUUID,
 					HullUUID:        hullUUID,
 					EngineUUID:      engineUUID,
@@ -69,6 +70,7 @@ func TestGetOrder(t *testing.T) {
 					Status:          orderv1.OrderStatusPAID,
 					CreatedAt:       now,
 				},
+				wantErr: false,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
@@ -90,35 +92,43 @@ func TestGetOrder(t *testing.T) {
 			},
 		},
 		{
-			name: "ошибка: заказ не найден",
+			name: "ошибка: not found",
 			args: args{
 				params: orderv1.GetOrderParams{
 					OrderUUID: orderUUID,
 				},
 			},
 			expected: expected{
-				err: ordererrs.ErrOrderNotFound,
+				res: &orderv1.GetOrderNotFound{
+					Code:    http.StatusNotFound,
+					Message: ordererrs.ErrOrderNotFound.Error(),
+				},
+				wantErr: true,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Get(ctx, orderUUID.String()).
-					Return(model.Order{}, ordererrs.ErrOrderNotFound)
+					Return(model.Order{}, pkgerr.NotFound(ordererrs.ErrOrderNotFound))
 			},
 		},
 		{
-			name: "ошибка: внутренняя ошибка",
+			name: "ошибка: internal",
 			args: args{
 				params: orderv1.GetOrderParams{
 					OrderUUID: orderUUID,
 				},
 			},
 			expected: expected{
-				err: unexpectedErr,
+				res: &orderv1.GetOrderInternalServerError{
+					Code:    http.StatusInternalServerError,
+					Message: unexpectedErr.Error(),
+				},
+				wantErr: true,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Get(ctx, orderUUID.String()).
-					Return(model.Order{}, unexpectedErr)
+					Return(model.Order{}, pkgerr.Internal(unexpectedErr))
 			},
 		},
 	}
@@ -133,26 +143,23 @@ func TestGetOrder(t *testing.T) {
 			api := orderapi.NewAPI(svc)
 
 			resp, err := api.GetOrder(ctx, tc.args.params)
-			if tc.expected.err != nil {
-				require.Error(t, err)
-				assert.ErrorIs(t, err, tc.expected.err)
-				assert.Nil(t, resp)
-				return
-			}
-
 			require.NoError(t, err)
-			dto, ok := resp.(*orderv1.OrderDto)
-			require.True(t, ok)
-			assert.Equal(t, tc.expected.resp.OrderUUID, dto.OrderUUID)
-			assert.Equal(t, tc.expected.resp.HullUUID, dto.HullUUID)
-			assert.Equal(t, tc.expected.resp.EngineUUID, dto.EngineUUID)
-			assert.Equal(t, tc.expected.resp.ShieldUUID, dto.ShieldUUID)
-			assert.Equal(t, tc.expected.resp.WeaponUUID, dto.WeaponUUID)
-			assert.Equal(t, tc.expected.resp.TotalPrice, dto.TotalPrice)
-			assert.Equal(t, tc.expected.resp.TransactionUUID, dto.TransactionUUID)
-			assert.Equal(t, tc.expected.resp.PaymentMethod, dto.PaymentMethod)
-			assert.Equal(t, tc.expected.resp.Status, dto.Status)
-			assert.Equal(t, tc.expected.resp.CreatedAt, dto.CreatedAt)
+			require.Equal(t, tc.expected.res, resp)
+
+			if !tc.expected.wantErr {
+				result, ok := resp.(*orderv1.OrderDto)
+				require.True(t, ok)
+				assert.Equal(t, result.OrderUUID.String(), orderUUID.String())
+				assert.Equal(t, result.HullUUID.String(), hullUUID.String())
+				assert.Equal(t, result.EngineUUID.String(), engineUUID.String())
+				assert.Equal(t, result.ShieldUUID.Value.String(), shieldUUID.String())
+				assert.Equal(t, result.WeaponUUID.Value.String(), weaponUUID.String())
+				assert.Equal(t, result.TotalPrice, int64(777000))
+				assert.Equal(t, result.TransactionUUID.Value.String(), transactionUUID.String())
+				assert.Equal(t, result.PaymentMethod.Value, orderv1.PaymentMethodCARD)
+				assert.Equal(t, result.Status, orderv1.OrderStatusPAID)
+				assert.False(t, result.CreatedAt.IsZero())
+			}
 		})
 	}
 }

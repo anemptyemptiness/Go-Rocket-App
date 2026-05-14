@@ -5,17 +5,11 @@ import (
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
-func PaymentMethodFromStringToInt32(paymentMethod model.PaymentMethod) int32 {
-	switch paymentMethod {
-	case model.PaymentMethodCard:
-		return int32(paymentv1.PaymentMethod_PAYMENT_METHOD_CARD)
-	case model.PaymentMethodSBP:
-		return int32(paymentv1.PaymentMethod_PAYMENT_METHOD_SBP)
-	case model.PaymentMethodCreditCard:
-		return int32(paymentv1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD)
-	case model.PaymentMethodInvestorMoney:
-		return int32(paymentv1.PaymentMethod_PAYMENT_METHOD_INVESTOR_MONEY)
-	default:
-		return int32(paymentv1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED)
+func PaymentMethodFromModelToProto(paymentMethod model.PaymentMethod) paymentv1.PaymentMethod {
+	val, ok := paymentv1.PaymentMethod_value["PAYMENT_METHOD_"+string(paymentMethod)]
+	if !ok {
+		return paymentv1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED
 	}
+
+	return paymentv1.PaymentMethod(val)
 }

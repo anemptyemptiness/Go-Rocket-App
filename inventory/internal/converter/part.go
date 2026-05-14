@@ -1,6 +1,8 @@
 package converter
 
 import (
+	"slices"
+
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
@@ -14,7 +16,7 @@ func PartModelToProto(part model.Part) *inventoryv1.Part {
 		Name:          part.Name,
 		Description:   part.Description,
 		Price:         part.Price,
-		PartType:      inventoryv1.PartType(part.PartType.ToInt32()),
+		PartType:      model.PartType.ToProto(part.PartType),
 		StockQuantity: part.StockQuantity,
 		CreatedAt:     timestamppb.New(part.CreatedAt),
 	}
@@ -25,8 +27,7 @@ func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (model.Part
 		return model.PartFilter{}, errs.ErrEmptyRequest
 	}
 
-	uuids := make([]string, 0, len(req.GetUuids()))
-	uuids = append(uuids, req.GetUuids()...)
+	uuids := slices.Clone(req.GetUuids())
 
 	var partType model.PartType
 
@@ -44,7 +45,7 @@ func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (model.Part
 	}
 
 	return model.PartFilter{
-		Uuids:    uuids,
+		UUIDs:    uuids,
 		PartType: partType,
 	}, nil
 }

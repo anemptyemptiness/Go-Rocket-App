@@ -19,6 +19,8 @@ type Order struct {
 	UpdatedAt       *time.Time     `db:"updated_at"`
 }
 
+type PartType string
+
 type OrderItem struct {
 	Uuid      string    `db:"uuid" json:"uuid"`
 	OrderUuid string    `db:"order_uuid" json:"orderUuid"`

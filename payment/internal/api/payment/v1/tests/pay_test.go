@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/go-faster/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -34,7 +33,7 @@ func TestPayOrder(t *testing.T) {
 		transactionUUID  = gofakeit.UUID()
 		emptyOrderUUID   = ""
 		invalidOrderUUID = "kfdnmskjfnsd"
-		unexpectedErr    = errors.New("внезапность")
+		unexpectedErr    = assert.AnError
 	)
 
 	tests := []struct {

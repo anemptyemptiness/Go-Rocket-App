@@ -9,16 +9,14 @@ import (
 	"syscall"
 	"time"
 
-	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
-	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
 const (
@@ -35,7 +33,8 @@ const (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
 
 	err := godotenv.Load("../inventory.env")
 	if err != nil {
@@ -45,10 +44,10 @@ func main() {
 
 	lc := net.ListenConfig{}
 
-	lis, err := lc.Listen(context.Background(), "tcp", grpcAddress)
+	lis, err := lc.Listen(ctx, "tcp", grpcAddress)
 	if err != nil {
 		slog.Error("не удалось создать listener", "error", err)
-		os.Exit(1)
+		return
 	}
 
 	grpcServer := grpc.NewServer(
@@ -63,15 +62,14 @@ func main() {
 			MinTime:             keepAliveMinTime,
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
-		grpc.ChainUnaryInterceptor(
-			interceptor.ErrorInterceptor(),
-		),
+		grpc.UnaryInterceptor(pkgerr.UnaryErrorInterceptor(slog.Default())),
 	)
 
 	// DSN берём из order.env / inventory.env (пока хардкодим в main.go, конфиги — неделя 4)
 	pool, err := pgxpool.New(ctx, os.Getenv("DB_URI"))
 	if err != nil {
 		slog.Error("создание пула соединений", "error", err)
+		return
 	}
 	defer pool.Close()
 
@@ -79,17 +77,12 @@ func main() {
 	err = pool.Ping(ctx)
 	if err != nil {
 		slog.Error("проверка соединения с БД", "error", err)
+		return
 	}
 
 	slog.Info("подключение к PostgreSQL установлено")
 
-	// Создаём Transaction Manager для pgx
-	txManager, err := manager.New(trmpgx.NewDefaultFactory(pool))
-	if err != nil {
-		slog.Error("создание transaction manager", "error", err)
-	}
-
-	app.RegisterServices(grpcServer, pool, txManager)
+	app.RegisterServices(grpcServer, pool)
 
 	// Включаем reflection для postman/grpcurl
 	reflection.Register(grpcServer)
@@ -100,16 +93,12 @@ func main() {
 		err = grpcServer.Serve(lis)
 		if err != nil {
 			slog.Error("ошибка запуска сервера", "error", err)
+			return
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
+	<-ctx.Done()
 	slog.Info("🛑 остановка gRPC сервера")
-
 	grpcServer.GracefulStop()
-
 	slog.Info("✅ сервер остановлен")
 }

@@ -1,6 +1,8 @@
 package converter
 
 import (
+	"strings"
+
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
@@ -12,14 +14,14 @@ func PartProtoToModel(protoPart *inventoryv1.Part) (*model.Part, error) {
 	}
 
 	var partType model.PartType
-	switch protoPart.GetPartType() {
-	case inventoryv1.PartType_PART_TYPE_WEAPON:
+	switch model.PartType(strings.TrimPrefix(protoPart.PartType.String(), "PART_TYPE_")) {
+	case model.PartTypeWeapon:
 		partType = model.PartTypeWeapon
-	case inventoryv1.PartType_PART_TYPE_ENGINE:
+	case model.PartTypeEngine:
 		partType = model.PartTypeEngine
-	case inventoryv1.PartType_PART_TYPE_HULL:
+	case model.PartTypeHull:
 		partType = model.PartTypeHull
-	case inventoryv1.PartType_PART_TYPE_SHIELD:
+	case model.PartTypeShield:
 		partType = model.PartTypeShield
 	default:
 		partType = model.PartTypeUnspecified

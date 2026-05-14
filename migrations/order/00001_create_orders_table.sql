@@ -1,7 +1,7 @@
 -- +goose Up
-CREATE TABLE orders
+CREATE TABLE IF NOT EXISTS orders
 (
-    uuid             UUID PRIMARY KEY   DEFAULT gen_random_uuid(),
+    uuid             UUID PRIMARY KEY,
     total_price      BIGINT    NOT NULL DEFAULT 0,
     "status"         VARCHAR   NOT NULL DEFAULT 'PENDING_PAYMENT',
     transaction_uuid UUID,

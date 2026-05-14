@@ -2,7 +2,7 @@ package tests
 
 import (
 	"context"
-	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,6 +13,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1/mocks"
 	ordererrs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
 
@@ -25,15 +26,15 @@ func TestPayOrder(t *testing.T) {
 	}
 
 	type expected struct {
-		resp *orderv1.PayOrderResponse
-		err  error
+		res     orderv1.PayOrderRes
+		wantErr bool
 	}
 
 	var (
 		ctx             = context.Background()
 		orderUUID       = uuid.New()
 		transactionUUID = uuid.New()
-		unexpectedErr   = errors.New("внезапность")
+		unexpectedErr   = assert.AnError
 	)
 
 	tests := []struct {
@@ -53,9 +54,10 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: &orderv1.PayOrderResponse{
+				res: &orderv1.PayOrderResponse{
 					TransactionUUID: transactionUUID,
 				},
+				wantErr: false,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
@@ -64,7 +66,7 @@ func TestPayOrder(t *testing.T) {
 			},
 		},
 		{
-			name: "ошибка: пустой реквест",
+			name: "ошибка: bad request конвертер",
 			args: args{
 				req: nil,
 				params: orderv1.PayOrderParams{
@@ -72,12 +74,16 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: ordererrs.ErrEmptyRequest,
+				res: &orderv1.PayOrderBadRequest{
+					Code:    http.StatusBadRequest,
+					Message: ordererrs.ErrEmptyRequest.Error(),
+				},
+				wantErr: true,
 			},
 			setupMock: func(svc *mocks.OrderService) {},
 		},
 		{
-			name: "ошибка: некорректный статус заказа",
+			name: "ошибка: bad request сервиса",
 			args: args{
 				req: &orderv1.PayOrderRequest{
 					PaymentMethod: orderv1.PaymentMethodSBP,
@@ -87,16 +93,20 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: ordererrs.ErrOrderStatusIncorrect,
+				res: &orderv1.PayOrderBadRequest{
+					Code:    http.StatusBadRequest,
+					Message: ordererrs.ErrOrderStatusIncorrect.Error(),
+				},
+				wantErr: true,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Pay(ctx, orderUUID.String(), model.PaymentMethodSBP).
-					Return("", ordererrs.ErrOrderStatusIncorrect)
+					Return("", pkgerr.InvalidArgument(ordererrs.ErrOrderStatusIncorrect))
 			},
 		},
 		{
-			name: "ошибка: заказ не найден",
+			name: "ошибка: not found",
 			args: args{
 				req: &orderv1.PayOrderRequest{
 					PaymentMethod: orderv1.PaymentMethodCREDITCARD,
@@ -106,35 +116,20 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: ordererrs.ErrOrderNotFound,
+				res: &orderv1.PayOrderNotFound{
+					Code:    http.StatusNotFound,
+					Message: ordererrs.ErrOrderNotFound.Error(),
+				},
+				wantErr: true,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Pay(ctx, orderUUID.String(), model.PaymentMethodCreditCard).
-					Return("", ordererrs.ErrOrderNotFound)
+					Return("", pkgerr.NotFound(ordererrs.ErrOrderNotFound))
 			},
 		},
 		{
-			name: "ошибка: payment client invalid argument",
-			args: args{
-				req: &orderv1.PayOrderRequest{
-					PaymentMethod: orderv1.PaymentMethodINVESTORMONEY,
-				},
-				params: orderv1.PayOrderParams{
-					OrderUUID: orderUUID,
-				},
-			},
-			expected: expected{
-				err: ordererrs.ErrPaymentClientInvalidArgument,
-			},
-			setupMock: func(svc *mocks.OrderService) {
-				svc.EXPECT().
-					Pay(ctx, orderUUID.String(), model.PaymentMethodInvestorMoney).
-					Return("", ordererrs.ErrPaymentClientInvalidArgument)
-			},
-		},
-		{
-			name: "ошибка: внутренняя ошибка",
+			name: "ошибка: internal",
 			args: args{
 				req: &orderv1.PayOrderRequest{
 					PaymentMethod: orderv1.PaymentMethodCARD,
@@ -144,12 +139,39 @@ func TestPayOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: unexpectedErr,
+				res: &orderv1.PayOrderInternalServerError{
+					Code:    http.StatusInternalServerError,
+					Message: unexpectedErr.Error(),
+				},
+				wantErr: true,
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Pay(ctx, orderUUID.String(), model.PaymentMethodCard).
-					Return("", unexpectedErr)
+					Return("", pkgerr.Internal(unexpectedErr))
+			},
+		},
+		{
+			name: "ошибка: conflict",
+			args: args{
+				req: &orderv1.PayOrderRequest{
+					PaymentMethod: orderv1.PaymentMethodCARD,
+				},
+				params: orderv1.PayOrderParams{
+					OrderUUID: orderUUID,
+				},
+			},
+			expected: expected{
+				res: &orderv1.PayOrderConflict{
+					Code:    http.StatusConflict,
+					Message: unexpectedErr.Error(),
+				},
+				wantErr: true,
+			},
+			setupMock: func(svc *mocks.OrderService) {
+				svc.EXPECT().
+					Pay(ctx, orderUUID.String(), model.PaymentMethodCard).
+					Return("", pkgerr.Conflict(unexpectedErr))
 			},
 		},
 	}
@@ -164,17 +186,14 @@ func TestPayOrder(t *testing.T) {
 			api := orderapi.NewAPI(svc)
 
 			resp, err := api.PayOrder(ctx, tc.args.req, tc.args.params)
-			if tc.expected.err != nil {
-				require.Error(t, err)
-				assert.ErrorIs(t, err, tc.expected.err)
-				assert.Nil(t, resp)
-				return
-			}
-
 			require.NoError(t, err)
-			result, ok := resp.(*orderv1.PayOrderResponse)
-			require.True(t, ok)
-			assert.Equal(t, tc.expected.resp.TransactionUUID, result.TransactionUUID)
+			require.Equal(t, tc.expected.res, resp)
+
+			if !tc.expected.wantErr {
+				result, ok := resp.(*orderv1.PayOrderResponse)
+				require.True(t, ok)
+				assert.Equal(t, result.TransactionUUID.String(), transactionUUID.String())
+			}
 		})
 	}
 }

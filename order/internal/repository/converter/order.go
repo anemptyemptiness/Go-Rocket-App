@@ -15,7 +15,7 @@ func OrderRecordToModel(order record.Order) model.Order {
 	orderItems := make([]model.OrderItem, 0, len(order.OrderItems))
 	for _, item := range order.OrderItems {
 		orderItems = append(orderItems, model.OrderItem{
-			Uuid:      item.Uuid,
+			UUID:      item.Uuid,
 			OrderUuid: item.OrderUuid,
 			PartUuid:  item.PartUuid,
 			PartType:  model.PartType(item.PartType),

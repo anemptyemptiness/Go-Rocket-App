@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-faster/errors"
 	"github.com/jackc/pgx/v5"
@@ -13,6 +14,22 @@ import (
 )
 
 func (r *repository) Get(ctx context.Context, orderUUID string) (model.Order, error) {
+	order, err := r.get(ctx, orderUUID)
+	if err != nil {
+		return model.Order{}, err
+	}
+
+	orderItems, err := r.getOrderItems(ctx, orderUUID)
+	if err != nil {
+		return model.Order{}, err
+	}
+
+	order.OrderItems = orderItems
+
+	return repoConverter.OrderRecordToModel(order), nil
+}
+
+func (r *repository) get(ctx context.Context, orderUUID string) (record.Order, error) {
 	const queryOrder = `
 		SELECT
 			o.uuid,
@@ -37,9 +54,16 @@ func (r *repository) Get(ctx context.Context, orderUUID string) (model.Order, er
 		&order.UpdatedAt,
 	)
 	if err != nil {
-		return model.Order{}, handleError(err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return record.Order{}, fmt.Errorf("%w: uuid=%s", errs.ErrOrderNotFound, orderUUID)
+		}
+		return record.Order{}, err
 	}
 
+	return order, nil
+}
+
+func (r *repository) getOrderItems(ctx context.Context, orderUUID string) ([]record.OrderItem, error) {
 	const queryItems = `
 		SELECT
 			uuid,
@@ -54,25 +78,14 @@ func (r *repository) Get(ctx context.Context, orderUUID string) (model.Order, er
 
 	rows, err := r.getter.DefaultTrOrDB(ctx, r.pool).Query(ctx, queryItems, orderUUID)
 	if err != nil {
-		return model.Order{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
 	items, err := pgx.CollectRows(rows, pgx.RowToStructByName[record.OrderItem])
 	if err != nil {
-		return model.Order{}, err
+		return nil, err
 	}
 
-	order.OrderItems = items
-
-	return repoConverter.OrderRecordToModel(order), nil
-}
-
-func handleError(err error) error {
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return errs.ErrOrderNotFound
-	default:
-		return err
-	}
+	return items, nil
 }

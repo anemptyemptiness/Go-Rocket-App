@@ -2,7 +2,7 @@ package tests
 
 import (
 	"context"
-	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
@@ -12,6 +12,7 @@ import (
 	orderapi "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1/mocks"
 	ordererrs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
 
@@ -23,14 +24,13 @@ func TestCancelOrder(t *testing.T) {
 	}
 
 	type expected struct {
-		resp *orderv1.CancelOrderResponse
-		err  error
+		res orderv1.CancelOrderRes
 	}
 
 	var (
 		ctx           = context.Background()
 		orderUUID     = uuid.New()
-		unexpectedErr = errors.New("неожиданность")
+		unexpectedErr = assert.AnError
 	)
 
 	tests := []struct {
@@ -47,7 +47,7 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				resp: &orderv1.CancelOrderResponse{},
+				res: &orderv1.CancelOrderResponse{},
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
@@ -63,12 +63,15 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: ordererrs.ErrOrderNotFound,
+				res: &orderv1.CancelOrderNotFound{
+					Code:    http.StatusNotFound,
+					Message: ordererrs.ErrOrderNotFound.Error(),
+				},
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Cancel(ctx, orderUUID.String()).
-					Return(ordererrs.ErrOrderNotFound)
+					Return(pkgerr.NotFound(ordererrs.ErrOrderNotFound))
 			},
 		},
 		{
@@ -79,12 +82,15 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: ordererrs.ErrOrderAlreadyPaid,
+				res: &orderv1.CancelOrderConflict{
+					Code:    http.StatusConflict,
+					Message: ordererrs.ErrOrderAlreadyPaid.Error(),
+				},
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Cancel(ctx, orderUUID.String()).
-					Return(ordererrs.ErrOrderAlreadyPaid)
+					Return(pkgerr.Conflict(ordererrs.ErrOrderAlreadyPaid))
 			},
 		},
 		{
@@ -95,12 +101,15 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: ordererrs.ErrOrderAlreadyCancelled,
+				res: &orderv1.CancelOrderConflict{
+					Code:    http.StatusConflict,
+					Message: ordererrs.ErrOrderAlreadyCancelled.Error(),
+				},
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Cancel(ctx, orderUUID.String()).
-					Return(ordererrs.ErrOrderAlreadyCancelled)
+					Return(pkgerr.Conflict(ordererrs.ErrOrderAlreadyCancelled))
 			},
 		},
 		{
@@ -111,12 +120,15 @@ func TestCancelOrder(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: unexpectedErr,
+				res: &orderv1.CancelOrderInternalServerError{
+					Code:    http.StatusInternalServerError,
+					Message: unexpectedErr.Error(),
+				},
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
 					Cancel(ctx, orderUUID.String()).
-					Return(unexpectedErr)
+					Return(pkgerr.Internal(unexpectedErr))
 			},
 		},
 	}
@@ -131,17 +143,8 @@ func TestCancelOrder(t *testing.T) {
 			api := orderapi.NewAPI(svc)
 
 			resp, err := api.CancelOrder(ctx, tc.args.params)
-			if tc.expected.err != nil {
-				require.Error(t, err)
-				assert.ErrorIs(t, err, tc.expected.err)
-				assert.Nil(t, resp)
-				return
-			}
-
 			require.NoError(t, err)
-			result, ok := resp.(*orderv1.CancelOrderResponse)
-			require.True(t, ok)
-			assert.Equal(t, tc.expected.resp, result)
+			require.Equal(t, tc.expected.res, resp)
 		})
 	}
 }

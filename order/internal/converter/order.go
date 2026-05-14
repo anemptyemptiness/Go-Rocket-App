@@ -5,6 +5,7 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
 
@@ -51,14 +52,14 @@ func OrderModelToDTO(order model.Order) *orderv1.OrderDto {
 
 func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (model.CreateOrderRequest, error) {
 	if req == nil {
-		return model.CreateOrderRequest{}, errs.ErrEmptyRequest
+		return model.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrEmptyRequest)
 	}
 
 	var shieldUUID *string
 	if v := req.GetShieldUUID(); v.IsSet() && !v.IsNull() {
 		id, ok := v.Get()
 		if !ok {
-			return model.CreateOrderRequest{}, errs.ErrShieldUUIDIncorrect
+			return model.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrShieldUUIDIncorrect)
 		}
 
 		idStr := id.String()
@@ -69,7 +70,7 @@ func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (model.CreateOrd
 	if v := req.GetWeaponUUID(); v.IsSet() && !v.IsNull() {
 		id, ok := v.Get()
 		if !ok {
-			return model.CreateOrderRequest{}, errs.ErrWeaponUUIDIncorrect
+			return model.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrWeaponUUIDIncorrect)
 		}
 
 		idStr := id.String()
@@ -86,7 +87,7 @@ func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (model.CreateOrd
 
 func PayOrderRequestToModel(req *orderv1.PayOrderRequest, params orderv1.PayOrderParams) (model.PayOrderRequest, error) {
 	if req == nil {
-		return model.PayOrderRequest{}, errs.ErrEmptyRequest
+		return model.PayOrderRequest{}, pkgerr.InvalidArgument(errs.ErrEmptyRequest)
 	}
 
 	return model.PayOrderRequest{

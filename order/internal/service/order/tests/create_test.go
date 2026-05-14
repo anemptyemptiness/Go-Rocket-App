@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -14,7 +13,8 @@ import (
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
-	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
+	svcmocks "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
 func TestCreate_Success(t *testing.T) {
@@ -30,13 +30,6 @@ func TestCreate_Success(t *testing.T) {
 		now        = time.Now()
 	)
 
-	items := []model.OrderItem{
-		{PartUuid: hullUUID, Price: 10000, PartType: model.PartTypeHull},
-		{PartUuid: engineUUID, Price: 20000, PartType: model.PartTypeEngine},
-		{PartUuid: shieldUUID, Price: 30000, PartType: model.PartTypeShield},
-		{PartUuid: weaponUUID, Price: 40000, PartType: model.PartTypeWeapon},
-	}
-
 	req := model.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
@@ -44,10 +37,9 @@ func TestCreate_Success(t *testing.T) {
 		WeaponUUID: &weaponUUID,
 	}
 
-	repo := mocks.NewOrderRepository(t)
-	paymentClient := mocks.NewPaymentClient(t)
-	inventoryClient := mocks.NewInventoryClient(t)
-	txManager := mocks.NewTxManager(t)
+	repo := svcmocks.NewOrderRepository(t)
+	paymentClient := svcmocks.NewPaymentClient(t)
+	inventoryClient := svcmocks.NewInventoryClient(t)
 
 	inventoryClient.EXPECT().
 		ListParts(mock.Anything, []string{hullUUID, engineUUID, shieldUUID, weaponUUID}).
@@ -90,21 +82,24 @@ func TestCreate_Success(t *testing.T) {
 			},
 		}, nil)
 
-	txManager.EXPECT().
-		Do(ctx, mock.Anything).
-		RunAndReturn(func(ctx context.Context, fn func(txCtx context.Context) error) error {
-			repo.EXPECT().
-				Create(ctx, model.Order{
-					Items:      items,
-					TotalPrice: int64(100000),
-					Status:     model.OrderStatusPendingPayment,
-				}).
-				Return(orderUUID, nil)
+	items := []model.OrderItem{
+		{PartUuid: hullUUID, Price: 10000, PartType: model.PartTypeHull},
+		{PartUuid: engineUUID, Price: 20000, PartType: model.PartTypeEngine},
+		{PartUuid: shieldUUID, Price: 30000, PartType: model.PartTypeShield},
+		{PartUuid: weaponUUID, Price: 40000, PartType: model.PartTypeWeapon},
+	}
 
-			return fn(ctx)
-		})
+	order := model.Order{
+		Items:      items,
+		TotalPrice: int64(100000),
+		Status:     model.OrderStatusPendingPayment,
+	}
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	repo.EXPECT().
+		Create(ctx, order).
+		Return(orderUUID, nil)
+
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Create(ctx, req)
 	require.NoError(t, err)
@@ -132,12 +127,11 @@ func TestCreate_HullAndEngineRequired(t *testing.T) {
 		engineUUIDEmpty = ""
 	)
 
-	repo := mocks.NewOrderRepository(t)
-	paymentClient := mocks.NewPaymentClient(t)
-	inventoryClient := mocks.NewInventoryClient(t)
-	txManager := mocks.NewTxManager(t)
+	repo := svcmocks.NewOrderRepository(t)
+	paymentClient := svcmocks.NewPaymentClient(t)
+	inventoryClient := svcmocks.NewInventoryClient(t)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Create(ctx, model.CreateOrderRequest{
 		HullUUID:   hullUUIDEmpty,
@@ -157,23 +151,22 @@ func TestCreate_PartNotFound(t *testing.T) {
 		engineUUID = gofakeit.UUID()
 	)
 
-	repo := mocks.NewOrderRepository(t)
-	paymentClient := mocks.NewPaymentClient(t)
-	inventoryClient := mocks.NewInventoryClient(t)
-	txManager := mocks.NewTxManager(t)
+	repo := svcmocks.NewOrderRepository(t)
+	paymentClient := svcmocks.NewPaymentClient(t)
+	inventoryClient := svcmocks.NewInventoryClient(t)
 
 	inventoryClient.EXPECT().
 		ListParts(mock.Anything, []string{hullUUID, engineUUID}).
-		Return(nil, errs.ErrInventoryClientNotFound)
+		Return(nil, pkgerr.NotFound(assert.AnError))
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Create(ctx, model.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 	})
 	require.Error(t, err)
-	assert.ErrorIs(t, err, errs.ErrInventoryClientNotFound)
+	assert.ErrorIs(t, err, pkgerr.NotFound(assert.AnError))
 	assert.Empty(t, order)
 }
 
@@ -186,10 +179,9 @@ func TestCreate_PartIsOver(t *testing.T) {
 		engineUUID = gofakeit.UUID()
 	)
 
-	repo := mocks.NewOrderRepository(t)
-	paymentClient := mocks.NewPaymentClient(t)
-	inventoryClient := mocks.NewInventoryClient(t)
-	txManager := mocks.NewTxManager(t)
+	repo := svcmocks.NewOrderRepository(t)
+	paymentClient := svcmocks.NewPaymentClient(t)
+	inventoryClient := svcmocks.NewInventoryClient(t)
 
 	inventoryClient.EXPECT().
 		ListParts(mock.Anything, []string{hullUUID, engineUUID}).
@@ -212,7 +204,7 @@ func TestCreate_PartIsOver(t *testing.T) {
 			},
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Create(ctx, model.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -230,13 +222,12 @@ func TestCreate_RepoError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
-		unexpectedErr = errors.New("unexpected error")
+		unexpectedErr = assert.AnError
 	)
 
-	repo := mocks.NewOrderRepository(t)
-	paymentClient := mocks.NewPaymentClient(t)
-	inventoryClient := mocks.NewInventoryClient(t)
-	txManager := mocks.NewTxManager(t)
+	repo := svcmocks.NewOrderRepository(t)
+	paymentClient := svcmocks.NewPaymentClient(t)
+	inventoryClient := svcmocks.NewInventoryClient(t)
 
 	inventoryClient.EXPECT().
 		ListParts(mock.Anything, []string{hullUUID, engineUUID}).
@@ -259,32 +250,28 @@ func TestCreate_RepoError(t *testing.T) {
 			},
 		}, nil)
 
-	txManager.EXPECT().
-		Do(ctx, mock.Anything).
-		RunAndReturn(func(ctx context.Context, fn func(txCtx context.Context) error) error {
-			repo.EXPECT().
-				Create(ctx, model.Order{
-					Items: []model.OrderItem{
-						{
-							PartUuid: hullUUID,
-							Price:    int64(10000),
-							PartType: model.PartTypeHull,
-						},
-						{
-							PartUuid: engineUUID,
-							Price:    int64(20000),
-							PartType: model.PartTypeEngine,
-						},
-					},
-					TotalPrice: int64(30000),
-					Status:     model.OrderStatusPendingPayment,
-				}).
-				Return("", unexpectedErr)
+	order := model.Order{
+		Items: []model.OrderItem{
+			{
+				PartUuid: hullUUID,
+				Price:    int64(10000),
+				PartType: model.PartTypeHull,
+			},
+			{
+				PartUuid: engineUUID,
+				Price:    int64(20000),
+				PartType: model.PartTypeEngine,
+			},
+		},
+		TotalPrice: int64(30000),
+		Status:     model.OrderStatusPendingPayment,
+	}
 
-			return fn(ctx)
-		})
+	repo.EXPECT().
+		Create(ctx, order).
+		Return("", unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
 
 	order, err := svc.Create(ctx, model.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -292,5 +279,31 @@ func TestCreate_RepoError(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, unexpectedErr)
+	assert.Empty(t, order)
+}
+
+func TestCreate_PartUUIDInvalid(t *testing.T) {
+	t.Parallel()
+
+	var (
+		ctx        = context.Background()
+		hullUUID   = gofakeit.UUID()
+		engineUUID = gofakeit.UUID()
+		weaponUUID = ""
+	)
+
+	repo := svcmocks.NewOrderRepository(t)
+	paymentClient := svcmocks.NewPaymentClient(t)
+	inventoryClient := svcmocks.NewInventoryClient(t)
+
+	svc := orderservice.New(repo, paymentClient, inventoryClient)
+
+	order, err := svc.Create(ctx, model.CreateOrderRequest{
+		HullUUID:   hullUUID,
+		EngineUUID: engineUUID,
+		WeaponUUID: &weaponUUID,
+	})
+	require.Error(t, err)
+	require.ErrorIs(t, err, errs.ErrInvalidPartUUID)
 	assert.Empty(t, order)
 }
