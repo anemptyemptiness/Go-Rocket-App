@@ -50,6 +50,9 @@ func (s *service) ListParts(ctx context.Context, filter model.PartFilter) ([]mod
 		}
 		return nil, pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
 	}
+	if len(filter.UUIDs) > 0 && len(filter.UUIDs) != len(parts) {
+		return nil, pkgerr.NotFound(errs.ErrPartNotFound)
+	}
 
 	return parts, nil
 }

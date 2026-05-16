@@ -38,7 +38,7 @@ func (r *repository) GetPart(ctx context.Context, uuid string) (model.Part, erro
 		&part.CreatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, errs.ErrPartNotFound) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return model.Part{}, fmt.Errorf("%w: uuid=%s", errs.ErrPartNotFound, uuid)
 		}
 		return model.Part{}, err
@@ -59,18 +59,24 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 			p.created_at
 		FROM parts AS p `
 
+	var args []any
+
 	switch {
 	case len(filter.UUIDs) > 0:
-		query += `WHERE p.uuid = ANY($1::UUID[]);`
-	case filter.PartType != "":
 		query += `
-			WHERE p.part_type = $2
-			ORDER BY p.name;`
+			WHERE p.uuid = ANY($1::UUID[])
+			ORDER BY ARRAY_POSITION($1::UUID[], p.uuid);`
+		args = append(args, filter.UUIDs)
+	case filter.PartType != "" && filter.PartType != model.PartTypeUnspecified:
+		query += `
+			WHERE p.part_type = $1::VARCHAR
+			ORDER BY p.name ASC;`
+		args = append(args, string(filter.PartType))
 	default:
-		query += `;`
+		query += `ORDER BY p.name ASC;`
 	}
 
-	rows, err := r.getter.DefaultTrOrDB(ctx, r.pool).Query(ctx, query, filter.UUIDs, filter.PartType)
+	rows, err := r.getter.DefaultTrOrDB(ctx, r.pool).Query(ctx, query, args...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: filter=%v", errs.ErrPartNotFound, filter)
@@ -82,9 +88,6 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 	parts, err := pgx.CollectRows(rows, pgx.RowToStructByName[record.Part])
 	if err != nil {
 		return nil, err
-	}
-	if len(parts) == 0 {
-		return nil, errs.ErrPartNotFound
 	}
 
 	return repoConverter.PartsRecordToModel(parts), nil
