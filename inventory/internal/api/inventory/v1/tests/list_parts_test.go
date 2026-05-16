@@ -2,11 +2,11 @@ package tests
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -34,7 +34,6 @@ func TestListParts(t *testing.T) {
 		ctx = context.Background()
 
 		hullUUID            = gofakeit.UUID()
-		hullUUIDInvalid     = "fapskfpakf"
 		engineUUID          = gofakeit.UUID()
 		shieldUUID          = gofakeit.UUID()
 		weaponUUID          = gofakeit.UUID()
@@ -44,7 +43,7 @@ func TestListParts(t *testing.T) {
 		partTypeShield      = inventoryv1.PartType_PART_TYPE_SHIELD
 		partTypeWeapon      = inventoryv1.PartType_PART_TYPE_WEAPON
 
-		internalError = errors.New("неожиданность")
+		internalError = assert.AnError
 
 		now = time.Now()
 	)
@@ -108,7 +107,10 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
-					ListParts(ctx, []string{shieldUUID, engineUUID, weaponUUID, hullUUID}, model.PartTypeUnspecified).
+					ListParts(ctx, model.PartFilter{
+						UUIDs:    []string{shieldUUID, engineUUID, weaponUUID, hullUUID},
+						PartType: model.PartTypeUnspecified,
+					}).
 					Return([]model.Part{
 						{
 							UUID:          shieldUUID,
@@ -161,24 +163,6 @@ func TestListParts(t *testing.T) {
 			setupMock: func(svc *mocks.InventoryService) {},
 		},
 		{
-			name: "ошибка: невалидный UUID детали",
-			args: args{
-				req: &inventoryv1.ListPartsRequest{
-					Uuids:    []string{hullUUIDInvalid},
-					PartType: partTypeUnspecified,
-				},
-			},
-			expected: expected{
-				resp:    nil,
-				wantErr: errs.ErrIncorrectPartUUID,
-			},
-			setupMock: func(svc *mocks.InventoryService) {
-				svc.EXPECT().
-					ListParts(ctx, []string{hullUUIDInvalid}, model.PartTypeUnspecified).
-					Return(nil, errs.ErrIncorrectPartUUID)
-			},
-		},
-		{
 			name: "ошибка: деталь не найдена",
 			args: args{
 				req: &inventoryv1.ListPartsRequest{
@@ -192,7 +176,10 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
-					ListParts(ctx, []string{engineUUID}, model.PartTypeEngine).
+					ListParts(ctx, model.PartFilter{
+						UUIDs:    []string{engineUUID},
+						PartType: model.PartTypeEngine,
+					}).
 					Return(nil, errs.ErrPartNotFound)
 			},
 		},
@@ -210,8 +197,31 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
-					ListParts(ctx, []string{weaponUUID}, model.PartTypeWeapon).
+					ListParts(ctx, model.PartFilter{
+						UUIDs:    []string{weaponUUID},
+						PartType: model.PartTypeWeapon,
+					}).
 					Return(nil, internalError)
+			},
+		},
+		{
+			name: "ошибка: идентификатор детали невалидный",
+			args: args{
+				req: &inventoryv1.ListPartsRequest{
+					Uuids: []string{hullUUID, uuid.Nil.String()},
+				},
+			},
+			expected: expected{
+				resp:    nil,
+				wantErr: errs.ErrPartUUIDInvalid,
+			},
+			setupMock: func(svc *mocks.InventoryService) {
+				svc.EXPECT().
+					ListParts(ctx, model.PartFilter{
+						UUIDs:    []string{hullUUID, uuid.Nil.String()},
+						PartType: model.PartTypeUnspecified,
+					}).
+					Return(nil, errs.ErrPartUUIDInvalid)
 			},
 		},
 	}

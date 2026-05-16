@@ -9,15 +9,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
-	inventoryRepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
-	inventoryService "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part"
-	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
 const (
@@ -34,12 +33,21 @@ const (
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	err := godotenv.Load("../inventory.env")
+	if err != nil {
+		slog.Error("не удалось загрузить окружение", "error", err)
+		return
+	}
+
 	lc := net.ListenConfig{}
 
-	lis, err := lc.Listen(context.Background(), "tcp", grpcAddress)
+	lis, err := lc.Listen(ctx, "tcp", grpcAddress)
 	if err != nil {
 		slog.Error("не удалось создать listener", "error", err)
-		os.Exit(1)
+		return
 	}
 
 	grpcServer := grpc.NewServer(
@@ -54,16 +62,27 @@ func main() {
 			MinTime:             keepAliveMinTime,
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
-		grpc.ChainUnaryInterceptor(
-			interceptor.ErrorInterceptor(),
-		),
+		grpc.UnaryInterceptor(pkgerr.UnaryErrorInterceptor(slog.Default())),
 	)
 
-	repo := inventoryRepo.New()
-	service := inventoryService.New(repo)
-	api := apiv1.New(service)
+	// DSN берём из order.env / inventory.env (пока хардкодим в main.go, конфиги — неделя 4)
+	pool, err := pgxpool.New(ctx, os.Getenv("DB_URI"))
+	if err != nil {
+		slog.Error("создание пула соединений", "error", err)
+		return
+	}
+	defer pool.Close()
 
-	inventoryv1.RegisterInventoryServiceServer(grpcServer, api)
+	// Проверяем соединение
+	err = pool.Ping(ctx)
+	if err != nil {
+		slog.Error("проверка соединения с БД", "error", err)
+		return
+	}
+
+	slog.Info("подключение к PostgreSQL установлено")
+
+	app.RegisterServices(grpcServer, pool)
 
 	// Включаем reflection для postman/grpcurl
 	reflection.Register(grpcServer)
@@ -74,16 +93,12 @@ func main() {
 		err = grpcServer.Serve(lis)
 		if err != nil {
 			slog.Error("ошибка запуска сервера", "error", err)
+			return
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
+	<-ctx.Done()
 	slog.Info("🛑 остановка gRPC сервера")
-
 	grpcServer.GracefulStop()
-
 	slog.Info("✅ сервер остановлен")
 }

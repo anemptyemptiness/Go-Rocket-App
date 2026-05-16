@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,10 +12,8 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1"
-	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/interceptor"
-	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/service/payment"
-	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
+	errs "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
 const (
@@ -33,12 +30,15 @@ const (
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	lc := net.ListenConfig{}
 
-	lis, err := lc.Listen(context.Background(), "tcp", grpcAddress)
+	lis, err := lc.Listen(ctx, "tcp", grpcAddress)
 	if err != nil {
 		slog.Error("не удалось создать listener", "error", err)
-		os.Exit(1)
+		return
 	}
 
 	grpcServer := grpc.NewServer(
@@ -53,15 +53,10 @@ func main() {
 			MinTime:             keepAliveMinTime,
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
-		grpc.ChainUnaryInterceptor(
-			interceptor.ErrorInterceptor(),
-		),
+		grpc.UnaryInterceptor(errs.UnaryErrorInterceptor(slog.Default())),
 	)
 
-	paymentService := payment.New()
-	api := apiv1.New(paymentService)
-
-	paymentv1.RegisterPaymentServiceServer(grpcServer, api)
+	app.RegisterServices(grpcServer)
 
 	// Включаем reflection для postman/grpcurl
 	reflection.Register(grpcServer)
@@ -72,16 +67,12 @@ func main() {
 		err = grpcServer.Serve(lis)
 		if err != nil {
 			slog.Error("ошибка запуска сервера", "error", err)
+			return
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
+	<-ctx.Done()
 	slog.Info("🛑 остановка gRPC сервера")
-
 	grpcServer.GracefulStop()
-
 	slog.Info("✅ сервер остановлен")
 }

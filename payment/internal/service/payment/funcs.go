@@ -8,26 +8,27 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/payment/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/model"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
-func (s *service) PayOrder(_ context.Context, orderUUIDStr string, paymentMethod model.PaymentMethod) (string, error) {
-	if orderUUIDStr == "" {
-		return "", errs.ErrOrderUUIDIsEmpty
+func (s *service) PayOrder(_ context.Context, req model.PayRequest) (string, error) {
+	if req.OrderUUID == "" {
+		return "", pkgerr.InvalidArgument(errs.ErrOrderUUIDIsEmpty)
 	}
 
-	orderUUID, err := uuid.Parse(orderUUIDStr)
-	if err != nil {
-		return "", errs.ErrIncorrectOrderUUID
+	orderUuid, err := uuid.Parse(req.OrderUUID)
+	if err != nil || orderUuid == uuid.Nil {
+		return "", pkgerr.InvalidArgument(errs.ErrIncorrectOrderUUID)
 	}
 
-	if paymentMethod == model.PaymentMethodUnspecified {
-		return "", errs.ErrPaymentMethodUnspecified
+	if req.PaymentMethod == model.PaymentMethodUnspecified {
+		return "", pkgerr.InvalidArgument(errs.ErrPaymentMethodUnspecified)
 	}
 
 	transactionUUID := uuid.New()
 
 	slog.Info("оплата прошла успешно",
-		"order_uuid", orderUUID,
+		"order_uuid", req.OrderUUID,
 		"transaction_uuid", transactionUUID.String(),
 	)
 

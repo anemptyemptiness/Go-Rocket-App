@@ -1,6 +1,8 @@
 package converter
 
 import (
+	"slices"
+
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
@@ -14,23 +16,37 @@ func PartModelToProto(part model.Part) *inventoryv1.Part {
 		Name:          part.Name,
 		Description:   part.Description,
 		Price:         part.Price,
-		PartType:      inventoryv1.PartType(part.PartType),
+		PartType:      model.PartType.ToProto(part.PartType),
 		StockQuantity: part.StockQuantity,
 		CreatedAt:     timestamppb.New(part.CreatedAt),
 	}
 }
 
-func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (model.ListPartsRequest, error) {
+func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (model.PartFilter, error) {
 	if req == nil {
-		return model.ListPartsRequest{}, errs.ErrEmptyRequest
+		return model.PartFilter{}, errs.ErrEmptyRequest
 	}
 
-	uuidsStr := make([]string, 0, len(req.GetUuids()))
-	uuidsStr = append(uuidsStr, req.GetUuids()...)
+	uuids := slices.Clone(req.GetUuids())
 
-	return model.ListPartsRequest{
-		UUIDs:    uuidsStr,
-		PartType: model.PartType(req.GetPartType()),
+	var partType model.PartType
+
+	switch req.GetPartType() {
+	case inventoryv1.PartType_PART_TYPE_HULL:
+		partType = model.PartTypeHull
+	case inventoryv1.PartType_PART_TYPE_ENGINE:
+		partType = model.PartTypeEngine
+	case inventoryv1.PartType_PART_TYPE_SHIELD:
+		partType = model.PartTypeShield
+	case inventoryv1.PartType_PART_TYPE_WEAPON:
+		partType = model.PartTypeWeapon
+	default:
+		partType = model.PartTypeUnspecified
+	}
+
+	return model.PartFilter{
+		UUIDs:    uuids,
+		PartType: partType,
 	}, nil
 }
 

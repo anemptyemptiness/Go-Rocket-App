@@ -108,8 +108,8 @@ func (_c *InventoryService_GetPart_Call) RunAndReturn(run func(ctx context.Conte
 }
 
 // ListParts provides a mock function for the type InventoryService
-func (_mock *InventoryService) ListParts(ctx context.Context, uuids []string, partType model.PartType) ([]model.Part, error) {
-	ret := _mock.Called(ctx, uuids, partType)
+func (_mock *InventoryService) ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+	ret := _mock.Called(ctx, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListParts")
@@ -117,18 +117,18 @@ func (_mock *InventoryService) ListParts(ctx context.Context, uuids []string, pa
 
 	var r0 []model.Part
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, model.PartType) ([]model.Part, error)); ok {
-		return returnFunc(ctx, uuids, partType)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, model.PartFilter) ([]model.Part, error)); ok {
+		return returnFunc(ctx, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, model.PartType) []model.Part); ok {
-		r0 = returnFunc(ctx, uuids, partType)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, model.PartFilter) []model.Part); ok {
+		r0 = returnFunc(ctx, filter)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]model.Part)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, model.PartType) error); ok {
-		r1 = returnFunc(ctx, uuids, partType)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, model.PartFilter) error); ok {
+		r1 = returnFunc(ctx, filter)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -142,30 +142,24 @@ type InventoryService_ListParts_Call struct {
 
 // ListParts is a helper method to define mock.On call
 //   - ctx context.Context
-//   - uuids []string
-//   - partType model.PartType
-func (_e *InventoryService_Expecter) ListParts(ctx interface{}, uuids interface{}, partType interface{}) *InventoryService_ListParts_Call {
-	return &InventoryService_ListParts_Call{Call: _e.mock.On("ListParts", ctx, uuids, partType)}
+//   - filter model.PartFilter
+func (_e *InventoryService_Expecter) ListParts(ctx interface{}, filter interface{}) *InventoryService_ListParts_Call {
+	return &InventoryService_ListParts_Call{Call: _e.mock.On("ListParts", ctx, filter)}
 }
 
-func (_c *InventoryService_ListParts_Call) Run(run func(ctx context.Context, uuids []string, partType model.PartType)) *InventoryService_ListParts_Call {
+func (_c *InventoryService_ListParts_Call) Run(run func(ctx context.Context, filter model.PartFilter)) *InventoryService_ListParts_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []string
+		var arg1 model.PartFilter
 		if args[1] != nil {
-			arg1 = args[1].([]string)
-		}
-		var arg2 model.PartType
-		if args[2] != nil {
-			arg2 = args[2].(model.PartType)
+			arg1 = args[1].(model.PartFilter)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -176,7 +170,7 @@ func (_c *InventoryService_ListParts_Call) Return(parts []model.Part, err error)
 	return _c
 }
 
-func (_c *InventoryService_ListParts_Call) RunAndReturn(run func(ctx context.Context, uuids []string, partType model.PartType) ([]model.Part, error)) *InventoryService_ListParts_Call {
+func (_c *InventoryService_ListParts_Call) RunAndReturn(run func(ctx context.Context, filter model.PartFilter) ([]model.Part, error)) *InventoryService_ListParts_Call {
 	_c.Call.Return(run)
 	return _c
 }

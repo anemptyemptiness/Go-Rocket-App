@@ -24,12 +24,12 @@ func (a *api) GetPart(ctx context.Context, req *inventoryv1.GetPartRequest) (*in
 }
 
 func (a *api) ListParts(ctx context.Context, req *inventoryv1.ListPartsRequest) (*inventoryv1.ListPartsResponse, error) {
-	modelReq, err := converter.ListPartsRequestProtoToModel(req)
+	partFilter, err := converter.ListPartsRequestProtoToModel(req)
 	if err != nil {
 		return nil, err
 	}
 
-	parts, err := a.inventoryService.ListParts(ctx, modelReq.UUIDs, modelReq.PartType)
+	parts, err := a.inventoryService.ListParts(ctx, partFilter)
 	if err != nil {
 		return nil, err
 	}

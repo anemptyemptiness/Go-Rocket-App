@@ -1,35 +1,23 @@
 package model
 
-import (
-	"time"
+import "time"
 
-	"github.com/google/uuid"
-)
-
-type ListPartsClientRequest struct {
-	UUIDs []uuid.UUID
-}
-
-type PartType int32
+type PartType string
 
 const (
-	PartTypeUnspecified PartType = 0
-	PartTypeHull        PartType = 1
-	PartTypeEngine      PartType = 2
-	PartTypeShield      PartType = 3
-	PartTypeWeapon      PartType = 4
+	PartTypeUnspecified PartType = "UNSPECIFIED"
+	PartTypeHull        PartType = "HULL"
+	PartTypeEngine      PartType = "ENGINE"
+	PartTypeShield      PartType = "SHIELD"
+	PartTypeWeapon      PartType = "WEAPON"
 )
 
 type Part struct {
-	UUID          uuid.UUID
+	UUID          string
 	Name          string
 	Description   string
 	Price         int64
 	PartType      PartType
 	StockQuantity int64
 	CreatedAt     time.Time
-}
-
-type ListPartsClientResponse struct {
-	Parts []Part
 }

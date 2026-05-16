@@ -1,17 +1,24 @@
 package model
 
 import (
+	"strings"
 	"time"
+
+	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
-type PartType int32
+type PartType string
+
+func (pt PartType) ToProto() inventoryv1.PartType {
+	return inventoryv1.PartType(inventoryv1.PartType_value["PART_TYPE_"+strings.ToUpper(string(pt))])
+}
 
 const (
-	PartTypeUnspecified PartType = 0
-	PartTypeHull        PartType = 1
-	PartTypeEngine      PartType = 2
-	PartTypeShield      PartType = 3
-	PartTypeWeapon      PartType = 4
+	PartTypeUnspecified PartType = "UNSPECIFIED"
+	PartTypeHull        PartType = "HULL"
+	PartTypeEngine      PartType = "ENGINE"
+	PartTypeShield      PartType = "SHIELD"
+	PartTypeWeapon      PartType = "WEAPON"
 )
 
 type Part struct {
@@ -24,7 +31,7 @@ type Part struct {
 	CreatedAt     time.Time
 }
 
-type ListPartsRequest struct {
-	PartType PartType
+type PartFilter struct {
 	UUIDs    []string
+	PartType PartType
 }

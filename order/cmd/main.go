@@ -10,17 +10,17 @@ import (
 	"syscall"
 	"time"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
-	apiv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
-	inventoryclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
-	paymentclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/payment/v1"
-	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/middleware"
-	orderrepository "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
-	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
-	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/pkg/app"
+	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
+	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
 const (
@@ -36,14 +36,21 @@ const (
 	idleTimeout       = 60 * time.Second
 	maxHeaderBytes    = 1 << 20 // 1 Mb
 
-	shutdownTimeout = 10 * time.Second
-
 	keepAliveTime                = 60 * time.Second
 	keepAliveTimeout             = 3 * time.Second
 	keepAlivePermitWithoutStream = true
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	err := godotenv.Load("../order.env")
+	if err != nil {
+		slog.Error("не удалось загрузить окружение", "error", err)
+		return
+	}
+
 	inventoryConn, err := grpc.NewClient(inventoryServiceAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -54,8 +61,10 @@ func main() {
 	)
 	if err != nil {
 		slog.Error("не удалось подключиться к InventoryService", "error", err)
+		return
 	}
 	defer inventoryConn.Close()
+	inventoryClientGRPC := inventoryv1.NewInventoryServiceClient(inventoryConn)
 
 	paymentConn, err := grpc.NewClient(paymentServiceAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -67,22 +76,40 @@ func main() {
 	)
 	if err != nil {
 		slog.Error("не удалось подключиться к PaymentService", "error", err)
+		return
 	}
 	defer paymentConn.Close()
+	paymentClientGRPC := paymentv1.NewPaymentServiceClient(paymentConn)
 
-	paymentClient := paymentclientv1.New(paymentConn)
-	inventoryClient := inventoryclientv1.New(inventoryConn)
-	orderRepo := orderrepository.New()
-	orderSvc := orderservice.New(orderRepo, paymentClient, inventoryClient)
-	api := apiv1.NewAPI(orderSvc)
+	// DSN берём из order.env / inventory.env (пока хардкодим в main.go, конфиги — неделя 4)
+	pool, err := pgxpool.New(ctx, os.Getenv("DB_URI"))
+	if err != nil {
+		slog.Error("создание пула соединений", "error", err)
+		return
+	}
+	defer pool.Close()
+
+	// Проверяем соединение
+	err = pool.Ping(ctx)
+	if err != nil {
+		slog.Error("проверка соединения с БД", "error", err)
+		return
+	}
+
+	slog.Info("подключение к PostgreSQL установлено")
+
+	// Создаём Transaction Manager для pgx
+	txManager, err := manager.New(trmpgx.NewDefaultFactory(pool))
+	if err != nil {
+		slog.Error("создание transaction manager", "error", err)
+		return
+	}
 
 	// Создать OpenAPI сервер
-	orderServer, err := orderv1.NewServer(
-		api,
-		orderv1.WithMiddleware(middleware.ErrorMiddleware),
-	)
+	orderServer, err := app.NewHTTPHandler(pool, txManager, inventoryClientGRPC, paymentClientGRPC)
 	if err != nil {
 		slog.Error("ошибка создания сервера OpenAPI", "error", err)
+		return
 	}
 
 	httpServer := &http.Server{
@@ -101,21 +128,16 @@ func main() {
 		err = httpServer.ListenAndServe()
 		if err != nil {
 			slog.Error("ошибка запуска сервера", "error", err)
+			return
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	// Graceful shutdown http-сервера
+	<-ctx.Done()
 	slog.Info("🛑 завершение работы сервера...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
 
 	if shutdownErr := httpServer.Shutdown(ctx); shutdownErr != nil {
 		slog.Error("❌ ошибка при остановке сервера", "error", shutdownErr)
+		return
 	}
 
 	slog.Info("✅ сервер остановлен")

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/go-faster/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -28,21 +27,13 @@ func TestPayOrder(t *testing.T) {
 		err             error
 	}
 
-	paymentMethods := []paymentv1.PaymentMethod{
-		paymentv1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED,
-		paymentv1.PaymentMethod_PAYMENT_METHOD_CARD,
-		paymentv1.PaymentMethod_PAYMENT_METHOD_SBP,
-		paymentv1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD,
-		paymentv1.PaymentMethod_PAYMENT_METHOD_INVESTOR_MONEY,
-	}
-
 	var (
 		ctx              = context.Background()
 		orderUUID        = gofakeit.UUID()
 		transactionUUID  = gofakeit.UUID()
 		emptyOrderUUID   = ""
 		invalidOrderUUID = "kfdnmskjfnsd"
-		unexpectedErr    = errors.New("внезапность")
+		unexpectedErr    = assert.AnError
 	)
 
 	tests := []struct {
@@ -56,7 +47,7 @@ func TestPayOrder(t *testing.T) {
 			args: args{
 				req: &paymentv1.PayOrderRequest{
 					OrderUuid:     orderUUID,
-					PaymentMethod: paymentMethods[1],
+					PaymentMethod: paymentv1.PaymentMethod_PAYMENT_METHOD_SBP,
 				},
 			},
 			expected: expected{
@@ -65,25 +56,10 @@ func TestPayOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
-					PayOrder(ctx, orderUUID, model.PaymentMethod(paymentMethods[1])).
-					Return(transactionUUID, nil)
-			},
-		},
-		{
-			name: "успешно возвращенный transactionUUID",
-			args: args{
-				req: &paymentv1.PayOrderRequest{
-					OrderUuid:     orderUUID,
-					PaymentMethod: paymentMethods[2],
-				},
-			},
-			expected: expected{
-				transactionUUID: transactionUUID,
-				err:             nil,
-			},
-			setupMock: func(svc *mocks.PaymentService) {
-				svc.EXPECT().
-					PayOrder(ctx, orderUUID, model.PaymentMethod(paymentMethods[2])).
+					PayOrder(ctx, model.PayRequest{
+						OrderUUID:     orderUUID,
+						PaymentMethod: model.PaymentMethod(paymentv1.PaymentMethod_PAYMENT_METHOD_SBP),
+					}).
 					Return(transactionUUID, nil)
 			},
 		},
@@ -92,7 +68,7 @@ func TestPayOrder(t *testing.T) {
 			args: args{
 				req: &paymentv1.PayOrderRequest{
 					OrderUuid:     emptyOrderUUID,
-					PaymentMethod: paymentMethods[1],
+					PaymentMethod: paymentv1.PaymentMethod_PAYMENT_METHOD_SBP,
 				},
 			},
 			expected: expected{
@@ -101,7 +77,10 @@ func TestPayOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
-					PayOrder(ctx, emptyOrderUUID, model.PaymentMethod(paymentMethods[1])).
+					PayOrder(ctx, model.PayRequest{
+						OrderUUID:     emptyOrderUUID,
+						PaymentMethod: model.PaymentMethod(paymentv1.PaymentMethod_PAYMENT_METHOD_SBP),
+					}).
 					Return("", errs.ErrOrderUUIDIsEmpty)
 			},
 		},
@@ -110,7 +89,7 @@ func TestPayOrder(t *testing.T) {
 			args: args{
 				req: &paymentv1.PayOrderRequest{
 					OrderUuid:     invalidOrderUUID,
-					PaymentMethod: paymentMethods[1],
+					PaymentMethod: paymentv1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD,
 				},
 			},
 			expected: expected{
@@ -119,7 +98,10 @@ func TestPayOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
-					PayOrder(ctx, invalidOrderUUID, model.PaymentMethod(paymentMethods[1])).
+					PayOrder(ctx, model.PayRequest{
+						OrderUUID:     invalidOrderUUID,
+						PaymentMethod: model.PaymentMethod(paymentv1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD),
+					}).
 					Return("", errs.ErrIncorrectOrderUUID)
 			},
 		},
@@ -128,7 +110,7 @@ func TestPayOrder(t *testing.T) {
 			args: args{
 				req: &paymentv1.PayOrderRequest{
 					OrderUuid:     orderUUID,
-					PaymentMethod: paymentMethods[0],
+					PaymentMethod: paymentv1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED,
 				},
 			},
 			expected: expected{
@@ -137,7 +119,10 @@ func TestPayOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
-					PayOrder(ctx, orderUUID, model.PaymentMethod(paymentMethods[0])).
+					PayOrder(ctx, model.PayRequest{
+						OrderUUID:     orderUUID,
+						PaymentMethod: model.PaymentMethod(paymentv1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED),
+					}).
 					Return("", errs.ErrPaymentMethodUnspecified)
 			},
 		},
@@ -157,7 +142,7 @@ func TestPayOrder(t *testing.T) {
 			args: args{
 				req: &paymentv1.PayOrderRequest{
 					OrderUuid:     orderUUID,
-					PaymentMethod: paymentMethods[3],
+					PaymentMethod: paymentv1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD,
 				},
 			},
 			expected: expected{
@@ -166,7 +151,10 @@ func TestPayOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.PaymentService) {
 				svc.EXPECT().
-					PayOrder(ctx, orderUUID, model.PaymentMethod(paymentMethods[3])).
+					PayOrder(ctx, model.PayRequest{
+						OrderUUID:     orderUUID,
+						PaymentMethod: model.PaymentMethod(paymentv1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD),
+					}).
 					Return("", unexpectedErr)
 			},
 		},

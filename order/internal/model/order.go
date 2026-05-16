@@ -2,28 +2,16 @@ package model
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
-type PaymentMethodInt32 int32
+type PaymentMethod string
 
 const (
-	PaymentMethodInt32Unspecified   PaymentMethodInt32 = 0
-	PaymentMethodInt32Card          PaymentMethodInt32 = 1
-	PaymentMethodInt32SBP           PaymentMethodInt32 = 2
-	PaymentMethodInt32CreditCard    PaymentMethodInt32 = 3
-	PaymentMethodInt32InvestorMoney PaymentMethodInt32 = 4
-)
-
-type PaymentMethodString string
-
-const (
-	PaymentMethodStringUnspecified   PaymentMethodString = "UNSPECIFIED"
-	PaymentMethodStringCard          PaymentMethodString = "CARD"
-	PaymentMethodStringSBP           PaymentMethodString = "SBP"
-	PaymentMethodStringCreditCard    PaymentMethodString = "CREDIT_CARD"
-	PaymentMethodStringInvestorMoney PaymentMethodString = "INVESTOR_MONEY"
+	PaymentMethodUnspecified   PaymentMethod = "UNSPECIFIED"
+	PaymentMethodCard          PaymentMethod = "CARD"
+	PaymentMethodSBP           PaymentMethod = "SBP"
+	PaymentMethodCreditCard    PaymentMethod = "CREDIT_CARD"
+	PaymentMethodInvestorMoney PaymentMethod = "INVESTOR_MONEY"
 )
 
 type OrderStatus string
@@ -34,45 +22,50 @@ const (
 	OrderStatusCancelled      OrderStatus = "CANCELLED"
 )
 
-type GetOrderParams struct {
-	OrderUUID uuid.UUID
-}
-
-type OrderDTO struct {
-	OrderUUID       uuid.UUID
-	HullUUID        uuid.UUID
-	EngineUUID      uuid.UUID
-	ShieldUUID      *uuid.UUID
-	WeaponUUID      *uuid.UUID
-	TotalPrice      int64
-	TransactionUUID *uuid.UUID
-	PaymentMethod   *PaymentMethodString
-	Status          OrderStatus
-	CreatedAt       time.Time
-}
-
 type Order struct {
-	OrderUUID       uuid.UUID
-	HullUUID        uuid.UUID
-	EngineUUID      uuid.UUID
-	ShieldUUID      *uuid.UUID
-	WeaponUUID      *uuid.UUID
+	UUID            string
+	Items           []OrderItem
 	TotalPrice      int64
-	TransactionUUID *uuid.UUID
-	PaymentMethod   *PaymentMethodString
+	TransactionUUID *string
+	PaymentMethod   *PaymentMethod
 	Status          OrderStatus
 	CreatedAt       time.Time
+}
+
+func (o *Order) SetStatus(status OrderStatus) {
+	o.Status = status
+}
+
+func (o *Order) SetID(id string) {
+	o.UUID = id
+}
+
+func (o *Order) SetTransactionID(transactionID string) {
+	o.TransactionUUID = &transactionID
+}
+
+func (o *Order) SetPaymentMethod(method PaymentMethod) {
+	o.PaymentMethod = &method
+}
+
+type OrderItem struct {
+	UUID      string
+	OrderUuid string
+	PartUuid  string
+	PartType  PartType
+	Price     int64
+	CreatedAt time.Time
 }
 
 type CreateOrderRequest struct {
-	HullUUID   uuid.UUID
-	EngineUUID uuid.UUID
-	ShieldUUID *uuid.UUID
-	WeaponUUID *uuid.UUID
+	HullUUID   string
+	EngineUUID string
+	ShieldUUID *string
+	WeaponUUID *string
 }
 
-func (r *CreateOrderRequest) PartUUIDs() []uuid.UUID {
-	uuids := []uuid.UUID{r.HullUUID, r.EngineUUID}
+func (r *CreateOrderRequest) PartUUIDs() []string {
+	uuids := []string{r.HullUUID, r.EngineUUID}
 	if r.ShieldUUID != nil {
 		uuids = append(uuids, *r.ShieldUUID)
 	}
@@ -82,25 +75,7 @@ func (r *CreateOrderRequest) PartUUIDs() []uuid.UUID {
 	return uuids
 }
 
-type CreateOrderResponse struct {
-	OrderUUID  uuid.UUID
-	TotalPrice int64
-}
-
 type PayOrderRequest struct {
-	OrderUUID     uuid.UUID
-	PaymentMethod PaymentMethodString
-}
-
-type PayOrderResponse struct {
-	TransactionUUID uuid.UUID
-}
-
-type PayOrderClientRequest struct {
-	OrderUUID     uuid.UUID
-	PaymentMethod PaymentMethodInt32
-}
-
-type PayOrderClientResponse struct {
-	TransactionUUID uuid.UUID
+	OrderUUID     string
+	PaymentMethod PaymentMethod
 }

@@ -95,6 +95,12 @@ linters: # Список активных и отключённых линтер�
           - containedctx  # Разрешить context.Context в test suite структурах
           - testifylint   # Не применять строгие правила testify в тестах
           - unparam       # Не проверять неиспользуемые параметры в тестах
+      - path: '.*order/tests/.*'
+        linters:
+          - godot
+          - gosec
+          - noctx
+          - errname
 
   settings: # Индивидуальные настройки для конкретных линтеров
 

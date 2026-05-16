@@ -1,7 +1,7 @@
 package converter
 
 import (
-	"github.com/google/uuid"
+	"strings"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
@@ -13,17 +13,26 @@ func PartProtoToModel(protoPart *inventoryv1.Part) (*model.Part, error) {
 		return nil, nil
 	}
 
-	partUUID, err := uuid.Parse(protoPart.GetUuid())
-	if err != nil {
-		return nil, err
+	var partType model.PartType
+	switch model.PartType(strings.TrimPrefix(protoPart.PartType.String(), "PART_TYPE_")) {
+	case model.PartTypeWeapon:
+		partType = model.PartTypeWeapon
+	case model.PartTypeEngine:
+		partType = model.PartTypeEngine
+	case model.PartTypeHull:
+		partType = model.PartTypeHull
+	case model.PartTypeShield:
+		partType = model.PartTypeShield
+	default:
+		partType = model.PartTypeUnspecified
 	}
 
 	return &model.Part{
-		UUID:          partUUID,
+		UUID:          protoPart.GetUuid(),
 		Name:          protoPart.GetName(),
 		Description:   protoPart.GetDescription(),
 		Price:         protoPart.GetPrice(),
-		PartType:      model.PartType(protoPart.GetPartType()),
+		PartType:      partType,
 		StockQuantity: protoPart.GetStockQuantity(),
 		CreatedAt:     protoPart.CreatedAt.AsTime(),
 	}, nil

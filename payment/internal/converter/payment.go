@@ -6,12 +6,12 @@ import (
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
 
-func PayOrderRequestProtoToModel(req *paymentv1.PayOrderRequest) (model.PayOrderRequest, error) {
+func PayOrderRequestProtoToModel(req *paymentv1.PayOrderRequest) (model.PayRequest, error) {
 	if req == nil {
-		return model.PayOrderRequest{}, errs.ErrEmptyRequest
+		return model.PayRequest{}, errs.ErrEmptyRequest
 	}
 
-	return model.PayOrderRequest{
+	return model.PayRequest{
 		OrderUUID:     req.GetOrderUuid(),
 		PaymentMethod: model.PaymentMethod(req.GetPaymentMethod()),
 	}, nil

@@ -6,43 +6,31 @@ import (
 )
 
 func OrderRecordToModel(order record.Order) model.Order {
-	var paymentMethod *model.PaymentMethodString
+	var paymentMethod *model.PaymentMethod
 	if order.PaymentMethod != nil {
-		value := model.PaymentMethodString(*order.PaymentMethod)
+		value := model.PaymentMethod(*order.PaymentMethod)
 		paymentMethod = &value
 	}
 
+	orderItems := make([]model.OrderItem, 0, len(order.OrderItems))
+	for _, item := range order.OrderItems {
+		orderItems = append(orderItems, model.OrderItem{
+			UUID:      item.Uuid,
+			OrderUuid: item.OrderUuid,
+			PartUuid:  item.PartUuid,
+			PartType:  model.PartType(item.PartType),
+			Price:     item.Price,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+
 	return model.Order{
-		OrderUUID:       order.OrderUUID,
-		HullUUID:        order.HullUUID,
-		EngineUUID:      order.EngineUUID,
-		ShieldUUID:      order.ShieldUUID,
-		WeaponUUID:      order.WeaponUUID,
+		UUID:            order.Uuid,
+		Items:           orderItems,
 		TotalPrice:      order.TotalPrice,
 		TransactionUUID: order.TransactionUUID,
 		PaymentMethod:   paymentMethod,
 		Status:          model.OrderStatus(order.Status),
-		CreatedAt:       order.CreatedAt,
-	}
-}
-
-func OrderModelToRecord(order model.Order) record.Order {
-	var paymentMethod *record.PaymentMethod
-	if order.PaymentMethod != nil {
-		value := record.PaymentMethod(*order.PaymentMethod)
-		paymentMethod = &value
-	}
-
-	return record.Order{
-		OrderUUID:       order.OrderUUID,
-		HullUUID:        order.HullUUID,
-		EngineUUID:      order.EngineUUID,
-		ShieldUUID:      order.ShieldUUID,
-		WeaponUUID:      order.WeaponUUID,
-		TotalPrice:      order.TotalPrice,
-		TransactionUUID: order.TransactionUUID,
-		PaymentMethod:   paymentMethod,
-		Status:          record.OrderStatus(order.Status),
 		CreatedAt:       order.CreatedAt,
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -29,13 +28,10 @@ func TestGetPart(t *testing.T) {
 	}
 
 	var (
-		ctx = context.Background()
-
-		hullUUID        = gofakeit.UUID()
-		hullUUIDEmpty   = ""
-		hullUUIDInvalid = "fhuhgawufwqqqq"
-
-		now = time.Now()
+		ctx           = context.Background()
+		hullUUID      = gofakeit.UUID()
+		hullUUIDEmpty = ""
+		now           = time.Now()
 	)
 
 	tests := []struct {
@@ -63,7 +59,7 @@ func TestGetPart(t *testing.T) {
 			},
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
-					GetPart(ctx, uuid.MustParse(hullUUID)).
+					GetPart(ctx, hullUUID).
 					Return(model.Part{
 						UUID:          hullUUID,
 						Name:          "hull",
@@ -87,17 +83,6 @@ func TestGetPart(t *testing.T) {
 			setupMock: func(repo *mocks.Repository) {},
 		},
 		{
-			name: "ошибка: UUID детали некорректный",
-			args: args{
-				uuidStr: hullUUIDInvalid,
-			},
-			expected: expected{
-				part:    model.Part{},
-				wantErr: errs.ErrIncorrectPartUUID,
-			},
-			setupMock: func(repo *mocks.Repository) {},
-		},
-		{
 			name: "ошибка: деталь не найдена в репозитории",
 			args: args{
 				uuidStr: hullUUID,
@@ -108,7 +93,7 @@ func TestGetPart(t *testing.T) {
 			},
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
-					GetPart(ctx, uuid.MustParse(hullUUID)).
+					GetPart(ctx, hullUUID).
 					Return(model.Part{}, errs.ErrPartNotFound)
 			},
 		},

@@ -13,7 +13,7 @@ func (a *api) PayOrder(ctx context.Context, req *paymentv1.PayOrderRequest) (*pa
 		return nil, err
 	}
 
-	transactionUUID, err := a.paymentService.PayOrder(ctx, modelReq.OrderUUID, modelReq.PaymentMethod)
+	transactionUUID, err := a.paymentService.PayOrder(ctx, modelReq)
 	if err != nil {
 		return nil, err
 	}

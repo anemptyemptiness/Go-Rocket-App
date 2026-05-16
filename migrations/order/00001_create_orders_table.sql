@@ -1,0 +1,14 @@
+-- +goose Up
+CREATE TABLE IF NOT EXISTS orders
+(
+    uuid             UUID PRIMARY KEY,
+    total_price      BIGINT    NOT NULL DEFAULT 0,
+    "status"         VARCHAR   NOT NULL DEFAULT 'PENDING_PAYMENT',
+    transaction_uuid UUID,
+    payment_method   VARCHAR,
+    created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMP
+);
+
+-- +goose Down
+DROP TABLE IF EXISTS orders;
