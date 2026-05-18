@@ -1,0 +1,23 @@
+http:
+  host: "http-prod"
+  port: "8080"
+
+grpc:
+  payment_client:
+    host: "payment-client-prod"
+    port: "50052"
+
+  inventory_client:
+    host: "inventory-client-prod"
+    port: "50051"
+
+logger:
+  level: "debug"
+
+pg:
+  host: "postgres-prod"
+  port: "5432"
+  database: "MUST_BE_SET_VIA_ENV"
+  user: "MUST_BE_SET_VIA_ENV"
+  password: "MUST_BE_SET_VIA_ENV"
+  sslmode: "require"

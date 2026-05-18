@@ -44,7 +44,7 @@ packages:
       include-interface-regex: ".*Service"
   github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part:
     config:
-      include-interface-regex: ".*Repository"
+      include-interface-regex: ".*(Repository|Checker)"
   github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part:
     config:
       include-interface-regex: ".*TxManager"
