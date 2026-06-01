@@ -10,9 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
-	inventorysvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part/mocks"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/valueobject"
+	inventorysvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/application/part"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/application/part/mocks"
 )
 
 func TestGetPart(t *testing.T) {
@@ -23,7 +24,7 @@ func TestGetPart(t *testing.T) {
 	}
 
 	type expected struct {
-		part    model.Part
+		part    entity.Part
 		wantErr error
 	}
 
@@ -32,6 +33,18 @@ func TestGetPart(t *testing.T) {
 		hullUUID      = gofakeit.UUID()
 		hullUUIDEmpty = ""
 		now           = time.Now()
+	)
+
+	part := entity.RestorePart(
+		hullUUID,
+		"hull",
+		"hull-desc",
+		10000,
+		10,
+		0,
+		valueobject.PartTypeHull,
+		nil,
+		now,
 	)
 
 	tests := []struct {
@@ -46,29 +59,13 @@ func TestGetPart(t *testing.T) {
 				uuidStr: hullUUID,
 			},
 			expected: expected{
-				part: model.Part{
-					UUID:          hullUUID,
-					Name:          "hull",
-					Description:   "hull-desc",
-					Price:         10000,
-					PartType:      model.PartTypeHull,
-					StockQuantity: 10,
-					CreatedAt:     now,
-				},
+				part:    part,
 				wantErr: nil,
 			},
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
 					GetPart(ctx, hullUUID).
-					Return(model.Part{
-						UUID:          hullUUID,
-						Name:          "hull",
-						Description:   "hull-desc",
-						Price:         10000,
-						PartType:      model.PartTypeHull,
-						StockQuantity: 10,
-						CreatedAt:     now,
-					}, nil)
+					Return(part, nil)
 			},
 		},
 		{
@@ -77,7 +74,7 @@ func TestGetPart(t *testing.T) {
 				uuidStr: hullUUIDEmpty,
 			},
 			expected: expected{
-				part:    model.Part{},
+				part:    entity.Part{},
 				wantErr: errs.ErrPartUUIDIsEmpty,
 			},
 			setupMock: func(repo *mocks.Repository) {},
@@ -88,13 +85,13 @@ func TestGetPart(t *testing.T) {
 				uuidStr: hullUUID,
 			},
 			expected: expected{
-				part:    model.Part{},
+				part:    entity.Part{},
 				wantErr: errs.ErrPartNotFound,
 			},
 			setupMock: func(repo *mocks.Repository) {
 				repo.EXPECT().
 					GetPart(ctx, hullUUID).
-					Return(model.Part{}, errs.ErrPartNotFound)
+					Return(entity.Part{}, errs.ErrPartNotFound)
 			},
 		},
 	}
@@ -104,9 +101,12 @@ func TestGetPart(t *testing.T) {
 			t.Parallel()
 
 			repo := mocks.NewRepository(t)
+			compChecker := mocks.NewCompatibilityChecker(t)
+			txManager := mocks.NewTxManager(t)
+
 			tc.setupMock(repo)
 
-			svc := inventorysvc.New(repo)
+			svc := inventorysvc.New(repo, compChecker, txManager)
 
 			resp, err := svc.GetPart(ctx, tc.args.uuidStr)
 			if tc.expected.wantErr != nil {
@@ -116,8 +116,8 @@ func TestGetPart(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.NotEmpty(t, resp)
-				assert.IsType(t, model.Part{}, resp)
-				assert.Equal(t, resp.UUID, tc.expected.part.UUID)
+				assert.IsType(t, entity.Part{}, resp)
+				assert.Equal(t, resp.GetPartUUID(), tc.expected.part.GetPartUUID())
 			}
 		})
 	}

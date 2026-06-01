@@ -12,17 +12,19 @@ import (
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/config"
 	inventoryrepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
-	inventorysvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/part"
+	applicationsvcpart "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/application/part"
+	domainsvcchecker "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/domain/compatibility_checker"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
 type diContainer struct {
-	pgPool           *pgxpool.Pool
-	inventoryAPI     inventoryv1.InventoryServiceServer
-	inventoryService inventoryapi.InventoryService
-	inventoryRepo    inventorysvc.Repository
-	txManager        inventoryrepo.TxManager
+	pgPool               *pgxpool.Pool
+	inventoryAPI         inventoryv1.InventoryServiceServer
+	inventoryService     inventoryapi.InventoryService
+	compatibilityChecker applicationsvcpart.CompatibilityChecker
+	inventoryRepo        applicationsvcpart.Repository
+	txManager            applicationsvcpart.TxManager
 }
 
 func (d *diContainer) PGPool(ctx context.Context) *pgxpool.Pool {
@@ -62,21 +64,29 @@ func (d *diContainer) InventoryAPI(ctx context.Context) inventoryv1.InventorySer
 
 func (d *diContainer) InventoryService(ctx context.Context) inventoryapi.InventoryService {
 	if d.inventoryService == nil {
-		d.inventoryService = inventorysvc.New(d.InventoryRepo(ctx))
+		d.inventoryService = applicationsvcpart.New(d.InventoryRepo(ctx), d.CompatibilityChecker(ctx), d.TxManager(ctx))
 	}
 
 	return d.inventoryService
 }
 
-func (d *diContainer) InventoryRepo(ctx context.Context) inventorysvc.Repository {
+func (d *diContainer) CompatibilityChecker(_ context.Context) applicationsvcpart.CompatibilityChecker {
+	if d.compatibilityChecker == nil {
+		d.compatibilityChecker = domainsvcchecker.New()
+	}
+
+	return d.compatibilityChecker
+}
+
+func (d *diContainer) InventoryRepo(ctx context.Context) applicationsvcpart.Repository {
 	if d.inventoryRepo == nil {
-		d.inventoryRepo = inventoryrepo.New(d.PGPool(ctx), d.TxManager(ctx))
+		d.inventoryRepo = inventoryrepo.New(d.PGPool(ctx))
 	}
 
 	return d.inventoryRepo
 }
 
-func (d *diContainer) TxManager(ctx context.Context) inventoryrepo.TxManager {
+func (d *diContainer) TxManager(ctx context.Context) applicationsvcpart.TxManager {
 	if d.txManager == nil {
 		txManager, err := manager.New(trmpgx.NewDefaultFactory(d.PGPool(ctx)))
 		if err != nil {

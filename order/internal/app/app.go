@@ -53,6 +53,7 @@ func (a *App) Run() error {
 
 	select {
 	case err := <-errChan:
+		a.startGracefulShutdown()
 		return err
 	case <-ctx.Done():
 		a.startGracefulShutdown()
@@ -78,8 +79,6 @@ func (a *App) startGracefulShutdown() {
 
 	if closeErr := closer.CloseAll(shutdownCtx); closeErr != nil {
 		slog.Error("ошибка при завершении работы", "error", closeErr)
-	} else {
-		slog.Info("http server успешно остановлен")
 	}
 }
 
@@ -104,16 +103,6 @@ func (a *App) initLogger(_ context.Context) {
 }
 
 func (a *App) initHTTPServer(ctx context.Context) {
-	closer.Add("HTTP Server", func(ctx context.Context) error {
-		err := a.httpServer.Shutdown(ctx)
-		if err != nil {
-			slog.Error("ошибка при остановке HTTP-сервера", "error", err)
-		} else {
-			slog.Info("HTTP-сервер успешно остановлен")
-		}
-		return nil
-	})
-
 	a.httpServer = &http.Server{
 		Addr:              config.AppConfig().HTTP.Address(),
 		Handler:           a.diContainer.OrderServer(ctx),
@@ -123,4 +112,14 @@ func (a *App) initHTTPServer(ctx context.Context) {
 		IdleTimeout:       idleTimeout,
 		MaxHeaderBytes:    maxHeaderBytes,
 	}
+
+	closer.Add("HTTP Server", func(ctx context.Context) error {
+		err := a.httpServer.Shutdown(ctx)
+		if err != nil {
+			slog.Error("ошибка при остановке HTTP-сервера", "error", err)
+		} else {
+			slog.Info("HTTP-сервер успешно остановлен")
+		}
+		return nil
+	})
 }

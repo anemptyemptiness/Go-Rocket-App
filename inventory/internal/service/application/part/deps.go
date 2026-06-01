@@ -1,4 +1,4 @@
-package v1
+package part
 
 import (
 	"context"
@@ -7,10 +7,16 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/input"
 )
 
-type InventoryService interface {
+type Repository interface {
 	GetPart(ctx context.Context, uuid string) (entity.Part, error)
 	ListParts(ctx context.Context, filter input.PartFilter) ([]entity.Part, error)
-	ValidateCompatibility(ctx context.Context, req input.ValidateCompatibilityRequest) error
-	ReserveParts(ctx context.Context, req input.ReservePartsRequest) error
-	ReleaseParts(ctx context.Context, req input.ReleasePartsRequest) error
+	UpdateReservedBatch(ctx context.Context, parts []entity.Part) error
+}
+
+type TxManager interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
+type CompatibilityChecker interface {
+	Check(parts []entity.Part) error
 }

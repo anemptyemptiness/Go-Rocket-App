@@ -30,7 +30,7 @@ type diContainer struct {
 	orderAPI        orderv1.Handler
 	orderService    orderapi.OrderService
 	orderRepository ordersvc.OrderRepository
-	txManager       orderrepo.TxManager
+	txManager       ordersvc.TxManager
 	paymentClient   ordersvc.PaymentClient
 	inventoryClient ordersvc.InventoryClient
 	pool            *pgxpool.Pool
@@ -64,8 +64,9 @@ func (d *diContainer) OrderService(ctx context.Context) orderapi.OrderService {
 	if d.orderService == nil {
 		d.orderService = ordersvc.New(
 			d.OrderRepository(ctx),
-			d.PaymentClient(),
-			d.InventoryClient(),
+			d.PaymentClient(ctx),
+			d.InventoryClient(ctx),
+			d.TxManager(ctx),
 		)
 	}
 
@@ -74,13 +75,13 @@ func (d *diContainer) OrderService(ctx context.Context) orderapi.OrderService {
 
 func (d *diContainer) OrderRepository(ctx context.Context) ordersvc.OrderRepository {
 	if d.orderRepository == nil {
-		d.orderRepository = orderrepo.New(d.PGPool(ctx), d.TxManager(ctx))
+		d.orderRepository = orderrepo.New(d.PGPool(ctx))
 	}
 
 	return d.orderRepository
 }
 
-func (d *diContainer) TxManager(ctx context.Context) orderrepo.TxManager {
+func (d *diContainer) TxManager(ctx context.Context) ordersvc.TxManager {
 	if d.txManager == nil {
 		txManager, err := manager.New(trmpgx.NewDefaultFactory(d.PGPool(ctx)))
 		if err != nil {
@@ -97,7 +98,7 @@ func (d *diContainer) TxManager(ctx context.Context) orderrepo.TxManager {
 }
 
 //nolint:dupl // Два разных gRPC-клиента с одинаковым шаблоном инициализации; намеренно оставлено явно.
-func (d *diContainer) PaymentClient() ordersvc.PaymentClient {
+func (d *diContainer) PaymentClient(_ context.Context) ordersvc.PaymentClient {
 	if d.paymentClient == nil {
 		paymentConn, err := grpc.NewClient(config.AppConfig().GRPC.PaymentClient.Address(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -132,7 +133,7 @@ func (d *diContainer) PaymentClient() ordersvc.PaymentClient {
 }
 
 //nolint:dupl // Два разных gRPC-клиента с одинаковым шаблоном инициализации; намеренно оставлено явно.
-func (d *diContainer) InventoryClient() ordersvc.InventoryClient {
+func (d *diContainer) InventoryClient(_ context.Context) ordersvc.InventoryClient {
 	if d.inventoryClient == nil {
 		inventoryConn, err := grpc.NewClient(config.AppConfig().GRPC.InventoryClient.Address(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
