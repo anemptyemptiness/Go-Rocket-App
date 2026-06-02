@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS parts
     part_type      VARCHAR(20)  NOT NULL,
     price          BIGINT       NOT NULL,
     stock_quantity INT          NOT NULL DEFAULT 0,
-    created_at     TIMESTAMP    NOT NULL DEFAULT NOW()
+    created_at     TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMP    DEFAULT NULL
 );
 
 -- +goose Down

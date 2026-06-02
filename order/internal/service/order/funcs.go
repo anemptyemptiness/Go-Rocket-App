@@ -27,12 +27,17 @@ func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (mod
 	if req.HullUUID == "" || req.EngineUUID == "" {
 		return model.Order{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
 	}
-	if len(req.PartUUIDs()) > 0 {
-		for _, partUUID := range req.PartUUIDs() {
-			if partUUID == "" {
-				return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
-			}
+
+	seen := make(map[string]struct{})
+	for _, id := range req.PartUUIDs() {
+		if id == "" {
+			return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
 		}
+		if _, exists := seen[id]; exists {
+			return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
+		}
+
+		seen[id] = struct{}{}
 	}
 
 	var order model.Order
@@ -69,7 +74,7 @@ func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (mod
 		validatePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		err = s.inventoryClient.ValidateCompatibility(validatePartsCtx, parts)
+		err = s.inventoryClient.ValidateCompatibility(validatePartsCtx, req)
 		if err != nil {
 			return err
 		}
@@ -166,13 +171,13 @@ func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 		return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
 	}
 
-	releasePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
 	uuids := make([]string, 0, len(order.Items))
 	for _, item := range order.Items {
 		uuids = append(uuids, item.PartUuid)
 	}
+
+	releasePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// На будущее: здесь возможно реализовать паттерн SAGA, чтобы отменить ReleaseParts в grpc-inventory.
 	err = s.inventoryClient.ReleaseParts(releasePartsCtx, uuids)

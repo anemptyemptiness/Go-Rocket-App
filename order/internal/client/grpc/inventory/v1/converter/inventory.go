@@ -60,20 +60,17 @@ func ListPartsClientResponseProtoToModel(resp *inventoryv1.ListPartsResponse) ([
 	return modelParts, nil
 }
 
-func ModelPartsToValidateCompatibilityRequest(parts []model.Part) *inventoryv1.ValidateCompatibilityRequest {
-	pReq := &inventoryv1.ValidateCompatibilityRequest{}
+func ModelPartsToValidateCompatibilityRequest(uuids model.CreateOrderRequest) *inventoryv1.ValidateCompatibilityRequest {
+	pReq := &inventoryv1.ValidateCompatibilityRequest{
+		HullUuid:   uuids.HullUUID,
+		EngineUuid: uuids.EngineUUID,
+	}
 
-	for _, part := range parts {
-		switch part.PartType {
-		case model.PartTypeHull:
-			pReq.HullUuid = part.UUID
-		case model.PartTypeEngine:
-			pReq.EngineUuid = part.UUID
-		case model.PartTypeShield:
-			pReq.ShieldUuid = part.UUID
-		case model.PartTypeWeapon:
-			pReq.WeaponUuid = part.UUID
-		}
+	if uuids.ShieldUUID != nil {
+		pReq.ShieldUuid = *uuids.ShieldUUID
+	}
+	if uuids.WeaponUUID != nil {
+		pReq.WeaponUuid = *uuids.WeaponUUID
 	}
 
 	return pReq

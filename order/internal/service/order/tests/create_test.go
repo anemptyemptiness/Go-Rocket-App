@@ -93,7 +93,7 @@ func TestCreate_Success(t *testing.T) {
 		Return(parts, nil)
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, parts).
+		ValidateCompatibility(mock.Anything, req).
 		Return(nil)
 
 	inventoryClient.EXPECT().
@@ -296,7 +296,10 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		Return(parts, nil)
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, parts).
+		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+			HullUUID:   hullUUID,
+			EngineUUID: engineUUID,
+		}).
 		Return(unexpectedErr)
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
@@ -356,7 +359,10 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		Return(parts, nil)
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, parts).
+		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+			HullUUID:   hullUUID,
+			EngineUUID: engineUUID,
+		}).
 		Return(nil)
 
 	inventoryClient.EXPECT().
@@ -437,7 +443,10 @@ func TestCreate_RepoError(t *testing.T) {
 	}
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, parts).
+		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+			HullUUID:   hullUUID,
+			EngineUUID: engineUUID,
+		}).
 		Return(nil)
 
 	inventoryClient.EXPECT().

@@ -33,8 +33,8 @@ func (c *client) ListParts(ctx context.Context, uuids []string) ([]model.Part, e
 	return clientConverter.ListPartsClientResponseProtoToModel(resp)
 }
 
-func (c *client) ValidateCompatibility(ctx context.Context, parts []model.Part) error {
-	_, err := c.inventoryClient.ValidateCompatibility(ctx, clientConverter.ModelPartsToValidateCompatibilityRequest(parts))
+func (c *client) ValidateCompatibility(ctx context.Context, uuids model.CreateOrderRequest) error {
+	_, err := c.inventoryClient.ValidateCompatibility(ctx, clientConverter.ModelPartsToValidateCompatibilityRequest(uuids))
 	if err != nil {
 		switch status.Code(err) {
 		case codes.NotFound:
