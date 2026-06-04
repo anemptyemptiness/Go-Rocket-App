@@ -14,7 +14,9 @@ import (
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1/mocks"
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/valueobject"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/input"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -47,6 +49,11 @@ func TestListParts(t *testing.T) {
 
 		now = time.Now()
 	)
+
+	shield := entity.RestorePart(shieldUUID, "shield", "shield-desc", 10000, 10, 0, valueobject.PartTypeShield, nil, now)
+	engine := entity.RestorePart(engineUUID, "engine", "engine-desc", 20000, 20, 0, valueobject.PartTypeEngine, nil, now)
+	weapon := entity.RestorePart(weaponUUID, "weapon", "weapon-desc", 30000, 30, 0, valueobject.PartTypeWeapon, nil, now)
+	hull := entity.RestorePart(hullUUID, "hull", "hull-desc", 40000, 40, 0, valueobject.PartTypeHull, nil, now)
 
 	tests := []struct {
 		name      string
@@ -107,48 +114,11 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
-					ListParts(ctx, model.PartFilter{
+					ListParts(ctx, input.PartFilter{
 						UUIDs:    []string{shieldUUID, engineUUID, weaponUUID, hullUUID},
-						PartType: model.PartTypeUnspecified,
+						PartType: valueobject.PartTypeUnspecified,
 					}).
-					Return([]model.Part{
-						{
-							UUID:          shieldUUID,
-							Name:          "shield",
-							Description:   "shield-desc",
-							Price:         10000,
-							PartType:      model.PartTypeShield,
-							StockQuantity: 10,
-							CreatedAt:     now,
-						},
-						{
-							UUID:          engineUUID,
-							Name:          "engine",
-							Description:   "engine-desc",
-							Price:         20000,
-							PartType:      model.PartTypeEngine,
-							StockQuantity: 20,
-							CreatedAt:     now,
-						},
-						{
-							UUID:          weaponUUID,
-							Name:          "weapon",
-							Description:   "weapon-desc",
-							Price:         30000,
-							PartType:      model.PartTypeWeapon,
-							StockQuantity: 30,
-							CreatedAt:     now,
-						},
-						{
-							UUID:          hullUUID,
-							Name:          "hull",
-							Description:   "hull-desc",
-							Price:         40000,
-							PartType:      model.PartTypeHull,
-							StockQuantity: 40,
-							CreatedAt:     now,
-						},
-					}, nil)
+					Return([]entity.Part{shield, engine, weapon, hull}, nil)
 			},
 		},
 		{
@@ -176,9 +146,9 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
-					ListParts(ctx, model.PartFilter{
+					ListParts(ctx, input.PartFilter{
 						UUIDs:    []string{engineUUID},
-						PartType: model.PartTypeEngine,
+						PartType: valueobject.PartTypeEngine,
 					}).
 					Return(nil, errs.ErrPartNotFound)
 			},
@@ -197,9 +167,9 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
-					ListParts(ctx, model.PartFilter{
+					ListParts(ctx, input.PartFilter{
 						UUIDs:    []string{weaponUUID},
-						PartType: model.PartTypeWeapon,
+						PartType: valueobject.PartTypeWeapon,
 					}).
 					Return(nil, internalError)
 			},
@@ -217,9 +187,9 @@ func TestListParts(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
-					ListParts(ctx, model.PartFilter{
+					ListParts(ctx, input.PartFilter{
 						UUIDs:    []string{hullUUID, uuid.Nil.String()},
-						PartType: model.PartTypeUnspecified,
+						PartType: valueobject.PartTypeUnspecified,
 					}).
 					Return(nil, errs.ErrPartUUIDInvalid)
 			},

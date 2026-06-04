@@ -8,32 +8,33 @@ import (
 	"github.com/google/uuid"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/input"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
-func (s *service) GetPart(ctx context.Context, uuidStr string) (model.Part, error) {
+func (s *service) GetPart(ctx context.Context, uuidStr string) (entity.Part, error) {
 	if uuidStr == "" {
-		return model.Part{}, pkgerr.InvalidArgument(errs.ErrPartUUIDIsEmpty)
+		return entity.Part{}, pkgerr.InvalidArgument(errs.ErrPartUUIDIsEmpty)
 	}
 
 	partUuid, err := uuid.Parse(uuidStr)
 	if err != nil || partUuid == uuid.Nil {
-		return model.Part{}, pkgerr.InvalidArgument(errs.ErrPartUUIDInvalid)
+		return entity.Part{}, pkgerr.InvalidArgument(errs.ErrPartUUIDInvalid)
 	}
 
 	part, err := s.inventoryRepo.GetPart(ctx, partUuid.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrPartNotFound) {
-			return model.Part{}, pkgerr.NotFound(err)
+			return entity.Part{}, pkgerr.NotFound(err)
 		}
-		return model.Part{}, pkgerr.Internal(fmt.Errorf("получить деталь: %w", err))
+		return entity.Part{}, pkgerr.Internal(fmt.Errorf("получить деталь: %w", err))
 	}
 
 	return part, nil
 }
 
-func (s *service) ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+func (s *service) ListParts(ctx context.Context, filter input.PartFilter) ([]entity.Part, error) {
 	if len(filter.UUIDs) > 0 {
 		for _, uuidCheck := range filter.UUIDs {
 			partUuid, err := uuid.Parse(uuidCheck)
@@ -47,6 +48,9 @@ func (s *service) ListParts(ctx context.Context, filter model.PartFilter) ([]mod
 	if err != nil {
 		if errors.Is(err, errs.ErrPartNotFound) {
 			return nil, pkgerr.NotFound(err)
+		}
+		if errors.Is(err, errs.ErrInvalidProperties) {
+			return nil, pkgerr.Internal(err)
 		}
 		return nil, pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
 	}

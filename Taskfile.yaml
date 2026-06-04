@@ -328,6 +328,12 @@ tasks:
     cmds:
       - '{{.GOOSE}} -dir "$MIGRATIONS_DIR" postgres "$DB_URI" down'
 
+  migrate:up:all:
+    desc: "Поднимает все миграции"
+    cmds:
+      - task migrate:order:up
+      - task migrate:inventory:up
+
   migrate:inventory:status:
     desc: "Показывает статус миграций Inventory-сервиса"
     deps: [ goose:install ]

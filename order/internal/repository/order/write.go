@@ -11,23 +11,16 @@ import (
 )
 
 func (r *repository) Create(ctx context.Context, order model.Order) (string, error) {
-	txErr := r.txManager.Do(ctx, func(txCtx context.Context) error {
-		orderUUID, err := r.createOrder(txCtx, order)
-		if err != nil {
-			return err
-		}
+	orderUUID, err := r.createOrder(ctx, order)
+	if err != nil {
+		return "", err
+	}
 
-		order.UUID = orderUUID
+	order.UUID = orderUUID
 
-		err = r.createOrderItems(txCtx, order)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if txErr != nil {
-		return "", txErr
+	err = r.createOrderItems(ctx, order)
+	if err != nil {
+		return "", err
 	}
 
 	return order.UUID, nil

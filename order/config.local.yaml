@@ -1,0 +1,23 @@
+http:
+  host: "localhost"
+  port: "8080"
+
+grpc:
+  payment_client:
+    host: "localhost"
+    port: "50052"
+
+  inventory_client:
+    host: "localhost"
+    port: "50051"
+
+logger:
+  level: "debug"
+
+pg:
+  host: "localhost"
+  port: "5432"
+  database: "order-service"
+  user: "order-service-user"
+  password: "order-service-password"
+  sslmode: "disable"

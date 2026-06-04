@@ -27,92 +27,129 @@ func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (mod
 	if req.HullUUID == "" || req.EngineUUID == "" {
 		return model.Order{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
 	}
-	if len(req.PartUUIDs()) > 0 {
-		for _, partUUID := range req.PartUUIDs() {
-			if partUUID == "" {
-				return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
-			}
+
+	seen := make(map[string]struct{})
+	for _, id := range req.PartUUIDs() {
+		if id == "" {
+			return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
 		}
+		if _, exists := seen[id]; exists {
+			return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
+		}
+
+		seen[id] = struct{}{}
 	}
 
-	clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+	var order model.Order
 
-	parts, err := s.inventoryClient.ListParts(clientCtx, req.PartUUIDs())
+	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
+		listPartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		parts, err := s.inventoryClient.ListParts(listPartsCtx, req.PartUUIDs())
+		if err != nil {
+			return err
+		}
+
+		var totalPrice int64
+		var orderItems []model.OrderItem
+		for _, part := range parts {
+			if part.StockQuantity <= 0 {
+				return pkgerr.Conflict(fmt.Errorf("деталь %s: %w", part.Name, errs.ErrPartIsOver))
+			}
+
+			orderItems = append(orderItems, model.OrderItem{
+				PartUuid: part.UUID,
+				PartType: part.PartType,
+				Price:    part.Price,
+			})
+
+			totalPrice += part.Price
+		}
+
+		order.Items = orderItems
+		order.TotalPrice = totalPrice
+		order.Status = model.OrderStatusPendingPayment
+
+		validatePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		err = s.inventoryClient.ValidateCompatibility(validatePartsCtx, req)
+		if err != nil {
+			return err
+		}
+
+		reservePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		err = s.inventoryClient.ReserveParts(reservePartsCtx, req.PartUUIDs())
+		if err != nil {
+			return err
+		}
+
+		orderUUID, err := s.orderRepository.Create(ctx, order)
+		if err != nil {
+			return pkgerr.Internal(fmt.Errorf("создать заказ: %w", err))
+		}
+
+		order.SetID(orderUUID)
+
+		return nil
+	})
 	if err != nil {
 		return model.Order{}, err
 	}
-
-	var totalPrice int64
-	var orderItems []model.OrderItem
-	for _, part := range parts {
-		if part.StockQuantity <= 0 {
-			return model.Order{}, pkgerr.Conflict(fmt.Errorf("деталь %s: %w", part.Name, errs.ErrPartIsOver))
-		}
-
-		orderItems = append(orderItems, model.OrderItem{
-			PartUuid: part.UUID,
-			PartType: part.PartType,
-			Price:    part.Price,
-		})
-
-		totalPrice += part.Price
-	}
-
-	order := model.Order{
-		Items:      orderItems,
-		TotalPrice: totalPrice,
-		Status:     model.OrderStatusPendingPayment,
-	}
-
-	orderUUID, err := s.orderRepository.Create(ctx, order)
-	if err != nil {
-		return model.Order{}, pkgerr.Internal(fmt.Errorf("создать заказ: %w", err))
-	}
-
-	order.SetID(orderUUID)
 
 	return order, err
 }
 
 func (s *service) Pay(ctx context.Context, orderUUID string, method model.PaymentMethod) (string, error) {
-	order, err := s.orderRepository.Get(ctx, orderUUID)
-	if err != nil {
-		if errors.Is(err, errs.ErrOrderNotFound) {
-			return "", pkgerr.NotFound(err)
+	var transactionUUID string
+
+	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
+		order, err := s.orderRepository.Get(ctx, orderUUID)
+		if err != nil {
+			if errors.Is(err, errs.ErrOrderNotFound) {
+				return pkgerr.NotFound(err)
+			}
+			return pkgerr.Internal(fmt.Errorf("получить заказ: %w", err))
 		}
-		return "", pkgerr.Internal(fmt.Errorf("получить заказ: %w", err))
-	}
 
-	switch order.Status {
-	case model.OrderStatusPaid:
-		return "", pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
-	case model.OrderStatusCancelled:
-		return "", pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
-	}
-
-	if order.Status != model.OrderStatusPendingPayment {
-		return "", pkgerr.InvalidArgument(errs.ErrOrderStatusIncorrect)
-	}
-
-	clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	transactionUUID, err := s.paymentClient.PayOrder(clientCtx, orderUUID, method)
-	if err != nil {
-		return "", fmt.Errorf("оплатить заказ: %w", err)
-	}
-
-	order.SetStatus(model.OrderStatusPaid)
-	order.SetTransactionID(transactionUUID)
-	order.SetPaymentMethod(method)
-
-	err = s.orderRepository.Update(ctx, order)
-	if err != nil {
-		if errors.Is(err, errs.ErrOrderNotFound) {
-			return "", pkgerr.NotFound(err)
+		switch order.Status {
+		case model.OrderStatusPaid:
+			return pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
+		case model.OrderStatusCancelled:
+			return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
 		}
-		return "", pkgerr.Internal(fmt.Errorf("обновить заказ: %w", err))
+
+		if order.Status != model.OrderStatusPendingPayment {
+			return pkgerr.InvalidArgument(errs.ErrOrderStatusIncorrect)
+		}
+
+		clientCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		transactionUUID, err = s.paymentClient.PayOrder(clientCtx, orderUUID, method)
+		if err != nil {
+			return fmt.Errorf("оплатить заказ: %w", err)
+		}
+
+		order.SetStatus(model.OrderStatusPaid)
+		order.SetTransactionID(transactionUUID)
+		order.SetPaymentMethod(method)
+
+		err = s.orderRepository.Update(ctx, order)
+		if err != nil {
+			if errors.Is(err, errs.ErrOrderNotFound) {
+				return pkgerr.NotFound(err)
+			}
+			return pkgerr.Internal(fmt.Errorf("обновить заказ: %w", err))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
 
 	return transactionUUID, nil
@@ -132,6 +169,20 @@ func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 		return pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
 	case model.OrderStatusCancelled:
 		return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
+	}
+
+	uuids := make([]string, 0, len(order.Items))
+	for _, item := range order.Items {
+		uuids = append(uuids, item.PartUuid)
+	}
+
+	releasePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// На будущее: здесь возможно реализовать паттерн SAGA, чтобы отменить ReleaseParts в grpc-inventory.
+	err = s.inventoryClient.ReleaseParts(releasePartsCtx, uuids)
+	if err != nil {
+		return err
 	}
 
 	order.SetStatus(model.OrderStatusCancelled)

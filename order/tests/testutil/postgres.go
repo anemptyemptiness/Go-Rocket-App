@@ -44,7 +44,8 @@ type dbInfo struct {
 // StopShared в TestMain.
 func sharedContainer(ctx context.Context) (*tcpostgres.PostgresContainer, string, error) {
 	pgOnce.Do(func() {
-		c, err := tcpostgres.Run(ctx,
+		c, err := tcpostgres.Run(
+			ctx,
 			"postgres:18.3-alpine3.23",
 			tcpostgres.WithDatabase(pgPostgresDB),
 			tcpostgres.WithUsername("test"),
@@ -137,7 +138,8 @@ func createIsolatedDB(ctx context.Context, t *testing.T, prefix, migrationsDir s
 		// Завершаем активные коннекты и удаляем БД.
 		_, _ = admin.Exec(fmt.Sprintf(
 			`SELECT pg_terminate_backend(pid) FROM pg_stat_activity
-			 WHERE datname = '%s' AND pid <> pg_backend_pid()`, dbName))
+			 WHERE datname = '%s' AND pid <> pg_backend_pid()`, dbName,
+		))
 		_, _ = admin.Exec(fmt.Sprintf(`DROP DATABASE IF EXISTS %q`, dbName))
 	}
 

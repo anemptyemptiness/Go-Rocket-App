@@ -59,3 +59,19 @@ func ListPartsClientResponseProtoToModel(resp *inventoryv1.ListPartsResponse) ([
 
 	return modelParts, nil
 }
+
+func ModelPartsToValidateCompatibilityRequest(uuids model.CreateOrderRequest) *inventoryv1.ValidateCompatibilityRequest {
+	pReq := &inventoryv1.ValidateCompatibilityRequest{
+		HullUuid:   uuids.HullUUID,
+		EngineUuid: uuids.EngineUUID,
+	}
+
+	if uuids.ShieldUUID != nil {
+		pReq.ShieldUuid = *uuids.ShieldUUID
+	}
+	if uuids.WeaponUUID != nil {
+		pReq.WeaponUuid = *uuids.WeaponUUID
+	}
+
+	return pReq
+}

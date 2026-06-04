@@ -3,76 +3,30 @@ package main
 import (
 	"context"
 	"log/slog"
-	"net"
-	"os/signal"
-	"syscall"
-	"time"
+	"os"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/reflection"
+	"github.com/joho/godotenv"
 
-	"github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
-	errs "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
-)
-
-const (
-	grpcAddress = "0.0.0.0:50052"
-
-	maxConnectionIdle     = 15 * time.Minute
-	maxConnectionAge      = 30 * time.Minute
-	maxConnectionAgeGrace = 5 * time.Second
-
-	keepAliveTime                = 5 * time.Minute
-	keepAliveTimeout             = 10 * time.Second
-	keepAliveMinTime             = 50 * time.Second
-	keepAlivePermitWithoutStream = true
+	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/app"
+	"github.com/anemptyemptiness/Go-Rocket-App/payment/internal/config"
 )
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
+	// .env опционален — ошибка загрузки допустима.
+	_ = godotenv.Load("inventory.env") //nolint:gosec // G104: ошибка загрузки допустима.
 
-	lc := net.ListenConfig{}
+	configPath := config.ResolveConfigPath()
 
-	lis, err := lc.Listen(ctx, "tcp", grpcAddress)
+	// YAML-конфиг + env-переменные поверх.
+	err := config.Load(configPath)
 	if err != nil {
-		slog.Error("не удалось создать listener", "error", err)
-		return
+		slog.Error("не удалось загрузить конфигурацию", "error", err)
+		os.Exit(1)
 	}
 
-	grpcServer := grpc.NewServer(
-		grpc.KeepaliveParams(keepalive.ServerParameters{
-			MaxConnectionIdle:     maxConnectionIdle,
-			MaxConnectionAge:      maxConnectionAge,
-			MaxConnectionAgeGrace: maxConnectionAgeGrace,
-			Time:                  keepAliveTime,
-			Timeout:               keepAliveTimeout,
-		}),
-		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-			MinTime:             keepAliveMinTime,
-			PermitWithoutStream: keepAlivePermitWithoutStream,
-		}),
-		grpc.UnaryInterceptor(errs.UnaryErrorInterceptor(slog.Default())),
-	)
+	a := app.New(context.Background())
 
-	app.RegisterServices(grpcServer)
-
-	// Включаем reflection для postman/grpcurl
-	reflection.Register(grpcServer)
-
-	slog.Info("запуск PaymentService", "адрес", grpcAddress)
-
-	go func() {
-		err = grpcServer.Serve(lis)
-		if err != nil {
-			slog.Error("ошибка запуска сервера", "error", err)
-			return
-		}
-	}()
-
-	<-ctx.Done()
-	slog.Info("🛑 остановка gRPC сервера")
-	grpcServer.GracefulStop()
-	slog.Info("✅ сервер остановлен")
+	if err := a.Run(); err != nil {
+		slog.Error("ошибка при работе приложения", "error", err)
+	}
 }

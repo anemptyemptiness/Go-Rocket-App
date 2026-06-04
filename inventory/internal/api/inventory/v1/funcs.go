@@ -38,3 +38,45 @@ func (a *api) ListParts(ctx context.Context, req *inventoryv1.ListPartsRequest) 
 		Parts: converter.PartsModelToProto(parts),
 	}, nil
 }
+
+func (a *api) ValidateCompatibility(ctx context.Context, req *inventoryv1.ValidateCompatibilityRequest) (*inventoryv1.ValidateCompatibilityResponse, error) {
+	modelReq, err := converter.ValidateCompatibilityRequestToModel(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.inventoryService.ValidateCompatibility(ctx, modelReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &inventoryv1.ValidateCompatibilityResponse{}, nil
+}
+
+func (a *api) ReserveParts(ctx context.Context, req *inventoryv1.ReservePartsRequest) (*inventoryv1.ReservePartsResponse, error) {
+	modelReq, err := converter.ReservePartsRequestToModel(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.inventoryService.ReserveParts(ctx, modelReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &inventoryv1.ReservePartsResponse{}, nil
+}
+
+func (a *api) ReleaseParts(ctx context.Context, req *inventoryv1.ReleasePartsRequest) (*inventoryv1.ReleasePartsResponse, error) {
+	modelReq, err := converter.ReleasePartsRequestToModel(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.inventoryService.ReleaseParts(ctx, modelReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &inventoryv1.ReleasePartsResponse{}, nil
+}
