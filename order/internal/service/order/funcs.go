@@ -89,6 +89,8 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 		return "", pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
 	case model.OrderStatusCancelled:
 		return "", pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
+	case model.OrderStatusAssembled:
+		return "", pkgerr.Conflict(errs.ErrOrderAssembled)
 	}
 
 	if order.Status != model.OrderStatusPendingPayment {
@@ -132,6 +134,8 @@ func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 		return pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
 	case model.OrderStatusCancelled:
 		return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
+	case model.OrderStatusAssembled:
+		return pkgerr.Conflict(errs.ErrOrderAssembled)
 	}
 
 	order.SetStatus(model.OrderStatusCancelled)
