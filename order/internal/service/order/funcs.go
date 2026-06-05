@@ -115,14 +115,14 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 			return pkgerr.Internal(fmt.Errorf("получить заказ: %w", err))
 		}
 
-	switch order.Status {
-	case model.OrderStatusPaid:
-		return "", pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
-	case model.OrderStatusCancelled:
-		return "", pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
-	case model.OrderStatusAssembled:
-		return "", pkgerr.Conflict(errs.ErrOrderAssembled)
-	}
+		switch order.Status {
+		case model.OrderStatusPaid:
+			return pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
+		case model.OrderStatusCancelled:
+			return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
+		case model.OrderStatusAssembled:
+			return pkgerr.Conflict(errs.ErrOrderAssembled)
+		}
 
 		if order.Status != model.OrderStatusPendingPayment {
 			return pkgerr.InvalidArgument(errs.ErrOrderStatusIncorrect)

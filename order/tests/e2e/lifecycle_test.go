@@ -13,7 +13,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	inventoryv1 "github.com/student/shared/pkg/proto/inventory/v1"
+
+	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
 // HTTP DTOs дублируются с api_test намеренно: e2e — самостоятельная сьюта,
