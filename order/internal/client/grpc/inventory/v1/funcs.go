@@ -32,3 +32,69 @@ func (c *client) ListParts(ctx context.Context, uuids []string) ([]model.Part, e
 
 	return clientConverter.ListPartsClientResponseProtoToModel(resp)
 }
+
+func (c *client) ValidateCompatibility(ctx context.Context, uuids model.CreateOrderRequest) error {
+	_, err := c.inventoryClient.ValidateCompatibility(ctx, clientConverter.ModelPartsToValidateCompatibilityRequest(uuids))
+	if err != nil {
+		switch status.Code(err) {
+		case codes.NotFound:
+			return pkgerr.NotFound(err)
+		case codes.InvalidArgument:
+			return pkgerr.InvalidArgument(err)
+		case codes.FailedPrecondition:
+			return pkgerr.FailedPrecondition(err)
+		case codes.ResourceExhausted:
+			return pkgerr.ResourceExhausted(err)
+		case codes.Internal:
+			return pkgerr.Internal(err)
+		default:
+			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+	}
+
+	return nil
+}
+
+func (c *client) ReserveParts(ctx context.Context, uuids []string) error {
+	_, err := c.inventoryClient.ReserveParts(ctx, &inventoryv1.ReservePartsRequest{Uuids: uuids})
+	if err != nil {
+		switch status.Code(err) {
+		case codes.NotFound:
+			return pkgerr.NotFound(err)
+		case codes.InvalidArgument:
+			return pkgerr.InvalidArgument(err)
+		case codes.FailedPrecondition:
+			return pkgerr.FailedPrecondition(err)
+		case codes.ResourceExhausted:
+			return pkgerr.ResourceExhausted(err)
+		case codes.Internal:
+			return pkgerr.Internal(err)
+		default:
+			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+	}
+
+	return nil
+}
+
+func (c *client) ReleaseParts(ctx context.Context, uuids []string) error {
+	_, err := c.inventoryClient.ReleaseParts(ctx, &inventoryv1.ReleasePartsRequest{Uuids: uuids})
+	if err != nil {
+		switch status.Code(err) {
+		case codes.NotFound:
+			return pkgerr.NotFound(err)
+		case codes.InvalidArgument:
+			return pkgerr.InvalidArgument(err)
+		case codes.FailedPrecondition:
+			return pkgerr.FailedPrecondition(err)
+		case codes.ResourceExhausted:
+			return pkgerr.ResourceExhausted(err)
+		case codes.Internal:
+			return pkgerr.Internal(err)
+		default:
+			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+	}
+
+	return nil
+}

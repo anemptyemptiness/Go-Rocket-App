@@ -17,10 +17,14 @@ type OgenError interface {
 type errorFactory func(code int, msg string) any
 
 type httpErrorConfig struct {
-	badRequest errorFactory
-	notFound   errorFactory
-	conflict   errorFactory
-	internal   errorFactory
+	badRequest         errorFactory
+	notFound           errorFactory
+	conflict           errorFactory
+	forbidden          errorFactory
+	unauthorized       errorFactory
+	resourceExhausted  errorFactory
+	failedPrecondition errorFactory
+	internal           errorFactory
 }
 
 type Option func(*httpErrorConfig)
@@ -35,6 +39,22 @@ func WithNotFound[T OgenError]() Option {
 
 func WithConflict[T OgenError]() Option {
 	return func(c *httpErrorConfig) { c.conflict = newFactory[T]() }
+}
+
+func WithForbidden[T OgenError]() Option {
+	return func(c *httpErrorConfig) { c.forbidden = newFactory[T]() }
+}
+
+func WithUnauthorized[T OgenError]() Option {
+	return func(c *httpErrorConfig) { c.unauthorized = newFactory[T]() }
+}
+
+func WithResourceExhausted[T OgenError]() Option {
+	return func(c *httpErrorConfig) { c.resourceExhausted = newFactory[T]() }
+}
+
+func WithFailedPrecondition[T OgenError]() Option {
+	return func(c *httpErrorConfig) { c.failedPrecondition = newFactory[T]() }
 }
 
 func WithInternal[T OgenError]() Option {
@@ -91,6 +111,22 @@ func buildResponse(err error, cfg *httpErrorConfig) any {
 	case CodeConflict:
 		if cfg.conflict != nil {
 			return cfg.conflict(code, msg)
+		}
+	case CodeForbidden:
+		if cfg.forbidden != nil {
+			return cfg.forbidden(code, msg)
+		}
+	case CodeUnauthorized:
+		if cfg.unauthorized != nil {
+			return cfg.unauthorized(code, msg)
+		}
+	case CodeResourceExhausted:
+		if cfg.resourceExhausted != nil {
+			return cfg.resourceExhausted(code, msg)
+		}
+	case CodeFailedPrecondition:
+		if cfg.failedPrecondition != nil {
+			return cfg.failedPrecondition(code, msg)
 		}
 	}
 

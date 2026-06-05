@@ -10,7 +10,8 @@ package mocks
 import (
 	"context"
 
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/input"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -42,22 +43,22 @@ func (_m *InventoryService) EXPECT() *InventoryService_Expecter {
 }
 
 // GetPart provides a mock function for the type InventoryService
-func (_mock *InventoryService) GetPart(ctx context.Context, uuid string) (model.Part, error) {
+func (_mock *InventoryService) GetPart(ctx context.Context, uuid string) (entity.Part, error) {
 	ret := _mock.Called(ctx, uuid)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPart")
 	}
 
-	var r0 model.Part
+	var r0 entity.Part
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (model.Part, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (entity.Part, error)); ok {
 		return returnFunc(ctx, uuid)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) model.Part); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) entity.Part); ok {
 		r0 = returnFunc(ctx, uuid)
 	} else {
-		r0 = ret.Get(0).(model.Part)
+		r0 = ret.Get(0).(entity.Part)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = returnFunc(ctx, uuid)
@@ -97,37 +98,37 @@ func (_c *InventoryService_GetPart_Call) Run(run func(ctx context.Context, uuid 
 	return _c
 }
 
-func (_c *InventoryService_GetPart_Call) Return(part model.Part, err error) *InventoryService_GetPart_Call {
+func (_c *InventoryService_GetPart_Call) Return(part entity.Part, err error) *InventoryService_GetPart_Call {
 	_c.Call.Return(part, err)
 	return _c
 }
 
-func (_c *InventoryService_GetPart_Call) RunAndReturn(run func(ctx context.Context, uuid string) (model.Part, error)) *InventoryService_GetPart_Call {
+func (_c *InventoryService_GetPart_Call) RunAndReturn(run func(ctx context.Context, uuid string) (entity.Part, error)) *InventoryService_GetPart_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListParts provides a mock function for the type InventoryService
-func (_mock *InventoryService) ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+func (_mock *InventoryService) ListParts(ctx context.Context, filter input.PartFilter) ([]entity.Part, error) {
 	ret := _mock.Called(ctx, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListParts")
 	}
 
-	var r0 []model.Part
+	var r0 []entity.Part
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.PartFilter) ([]model.Part, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.PartFilter) ([]entity.Part, error)); ok {
 		return returnFunc(ctx, filter)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.PartFilter) []model.Part); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.PartFilter) []entity.Part); ok {
 		r0 = returnFunc(ctx, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]model.Part)
+			r0 = ret.Get(0).([]entity.Part)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, model.PartFilter) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, input.PartFilter) error); ok {
 		r1 = returnFunc(ctx, filter)
 	} else {
 		r1 = ret.Error(1)
@@ -142,20 +143,20 @@ type InventoryService_ListParts_Call struct {
 
 // ListParts is a helper method to define mock.On call
 //   - ctx context.Context
-//   - filter model.PartFilter
+//   - filter input.PartFilter
 func (_e *InventoryService_Expecter) ListParts(ctx interface{}, filter interface{}) *InventoryService_ListParts_Call {
 	return &InventoryService_ListParts_Call{Call: _e.mock.On("ListParts", ctx, filter)}
 }
 
-func (_c *InventoryService_ListParts_Call) Run(run func(ctx context.Context, filter model.PartFilter)) *InventoryService_ListParts_Call {
+func (_c *InventoryService_ListParts_Call) Run(run func(ctx context.Context, filter input.PartFilter)) *InventoryService_ListParts_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 model.PartFilter
+		var arg1 input.PartFilter
 		if args[1] != nil {
-			arg1 = args[1].(model.PartFilter)
+			arg1 = args[1].(input.PartFilter)
 		}
 		run(
 			arg0,
@@ -165,12 +166,183 @@ func (_c *InventoryService_ListParts_Call) Run(run func(ctx context.Context, fil
 	return _c
 }
 
-func (_c *InventoryService_ListParts_Call) Return(parts []model.Part, err error) *InventoryService_ListParts_Call {
+func (_c *InventoryService_ListParts_Call) Return(parts []entity.Part, err error) *InventoryService_ListParts_Call {
 	_c.Call.Return(parts, err)
 	return _c
 }
 
-func (_c *InventoryService_ListParts_Call) RunAndReturn(run func(ctx context.Context, filter model.PartFilter) ([]model.Part, error)) *InventoryService_ListParts_Call {
+func (_c *InventoryService_ListParts_Call) RunAndReturn(run func(ctx context.Context, filter input.PartFilter) ([]entity.Part, error)) *InventoryService_ListParts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReleaseParts provides a mock function for the type InventoryService
+func (_mock *InventoryService) ReleaseParts(ctx context.Context, req input.ReleasePartsRequest) error {
+	ret := _mock.Called(ctx, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReleaseParts")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.ReleasePartsRequest) error); ok {
+		r0 = returnFunc(ctx, req)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// InventoryService_ReleaseParts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReleaseParts'
+type InventoryService_ReleaseParts_Call struct {
+	*mock.Call
+}
+
+// ReleaseParts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req input.ReleasePartsRequest
+func (_e *InventoryService_Expecter) ReleaseParts(ctx interface{}, req interface{}) *InventoryService_ReleaseParts_Call {
+	return &InventoryService_ReleaseParts_Call{Call: _e.mock.On("ReleaseParts", ctx, req)}
+}
+
+func (_c *InventoryService_ReleaseParts_Call) Run(run func(ctx context.Context, req input.ReleasePartsRequest)) *InventoryService_ReleaseParts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 input.ReleasePartsRequest
+		if args[1] != nil {
+			arg1 = args[1].(input.ReleasePartsRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *InventoryService_ReleaseParts_Call) Return(err error) *InventoryService_ReleaseParts_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *InventoryService_ReleaseParts_Call) RunAndReturn(run func(ctx context.Context, req input.ReleasePartsRequest) error) *InventoryService_ReleaseParts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReserveParts provides a mock function for the type InventoryService
+func (_mock *InventoryService) ReserveParts(ctx context.Context, req input.ReservePartsRequest) error {
+	ret := _mock.Called(ctx, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReserveParts")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.ReservePartsRequest) error); ok {
+		r0 = returnFunc(ctx, req)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// InventoryService_ReserveParts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReserveParts'
+type InventoryService_ReserveParts_Call struct {
+	*mock.Call
+}
+
+// ReserveParts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req input.ReservePartsRequest
+func (_e *InventoryService_Expecter) ReserveParts(ctx interface{}, req interface{}) *InventoryService_ReserveParts_Call {
+	return &InventoryService_ReserveParts_Call{Call: _e.mock.On("ReserveParts", ctx, req)}
+}
+
+func (_c *InventoryService_ReserveParts_Call) Run(run func(ctx context.Context, req input.ReservePartsRequest)) *InventoryService_ReserveParts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 input.ReservePartsRequest
+		if args[1] != nil {
+			arg1 = args[1].(input.ReservePartsRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *InventoryService_ReserveParts_Call) Return(err error) *InventoryService_ReserveParts_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *InventoryService_ReserveParts_Call) RunAndReturn(run func(ctx context.Context, req input.ReservePartsRequest) error) *InventoryService_ReserveParts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ValidateCompatibility provides a mock function for the type InventoryService
+func (_mock *InventoryService) ValidateCompatibility(ctx context.Context, req input.ValidateCompatibilityRequest) error {
+	ret := _mock.Called(ctx, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ValidateCompatibility")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.ValidateCompatibilityRequest) error); ok {
+		r0 = returnFunc(ctx, req)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// InventoryService_ValidateCompatibility_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateCompatibility'
+type InventoryService_ValidateCompatibility_Call struct {
+	*mock.Call
+}
+
+// ValidateCompatibility is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req input.ValidateCompatibilityRequest
+func (_e *InventoryService_Expecter) ValidateCompatibility(ctx interface{}, req interface{}) *InventoryService_ValidateCompatibility_Call {
+	return &InventoryService_ValidateCompatibility_Call{Call: _e.mock.On("ValidateCompatibility", ctx, req)}
+}
+
+func (_c *InventoryService_ValidateCompatibility_Call) Run(run func(ctx context.Context, req input.ValidateCompatibilityRequest)) *InventoryService_ValidateCompatibility_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 input.ValidateCompatibilityRequest
+		if args[1] != nil {
+			arg1 = args[1].(input.ValidateCompatibilityRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *InventoryService_ValidateCompatibility_Call) Return(err error) *InventoryService_ValidateCompatibility_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *InventoryService_ValidateCompatibility_Call) RunAndReturn(run func(ctx context.Context, req input.ValidateCompatibilityRequest) error) *InventoryService_ValidateCompatibility_Call {
 	_c.Call.Return(run)
 	return _c
 }

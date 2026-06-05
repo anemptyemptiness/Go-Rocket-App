@@ -1,56 +1,53 @@
 package converter
 
 import (
-	"slices"
+	"strings"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/valueobject"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/input"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
-func PartModelToProto(part model.Part) *inventoryv1.Part {
+func PartModelToProto(part entity.Part) *inventoryv1.Part {
 	return &inventoryv1.Part{
-		Uuid:          part.UUID,
-		Name:          part.Name,
-		Description:   part.Description,
-		Price:         part.Price,
-		PartType:      model.PartType.ToProto(part.PartType),
-		StockQuantity: part.StockQuantity,
-		CreatedAt:     timestamppb.New(part.CreatedAt),
+		Uuid:          part.GetPartUUID(),
+		Name:          part.GetName(),
+		Description:   part.GetDescription(),
+		Price:         part.GetPrice(),
+		PartType:      valueobject.PartType.ToProto(part.GetPartType()),
+		StockQuantity: part.GetStockQuantity(),
+		CreatedAt:     timestamppb.New(part.GetCreatedAt()),
 	}
 }
 
-func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (model.PartFilter, error) {
+func ListPartsRequestProtoToModel(req *inventoryv1.ListPartsRequest) (input.PartFilter, error) {
 	if req == nil {
-		return model.PartFilter{}, errs.ErrEmptyRequest
+		return input.PartFilter{}, errs.ErrEmptyRequest
 	}
 
-	uuids := slices.Clone(req.GetUuids())
-
-	var partType model.PartType
-
-	switch req.GetPartType() {
-	case inventoryv1.PartType_PART_TYPE_HULL:
-		partType = model.PartTypeHull
-	case inventoryv1.PartType_PART_TYPE_ENGINE:
-		partType = model.PartTypeEngine
-	case inventoryv1.PartType_PART_TYPE_SHIELD:
-		partType = model.PartTypeShield
-	case inventoryv1.PartType_PART_TYPE_WEAPON:
-		partType = model.PartTypeWeapon
-	default:
-		partType = model.PartTypeUnspecified
+	uuids := make([]string, 0, len(req.Uuids))
+	for _, uuid := range req.Uuids {
+		if uuid != "" {
+			uuids = append(uuids, uuid)
+		}
 	}
 
-	return model.PartFilter{
+	partType, err := valueobject.NewPartType(strings.TrimPrefix(inventoryv1.PartType_name[int32(req.GetPartType())], "PART_TYPE_"))
+	if err != nil {
+		return input.PartFilter{}, err
+	}
+
+	return input.PartFilter{
 		UUIDs:    uuids,
 		PartType: partType,
 	}, nil
 }
 
-func PartsModelToProto(parts []model.Part) []*inventoryv1.Part {
+func PartsModelToProto(parts []entity.Part) []*inventoryv1.Part {
 	protoParts := make([]*inventoryv1.Part, 0, len(parts))
 
 	for _, part := range parts {
@@ -66,4 +63,58 @@ func GetPartRequestProtoToModel(req *inventoryv1.GetPartRequest) (string, error)
 	}
 
 	return req.GetUuid(), nil
+}
+
+func ValidateCompatibilityRequestToModel(req *inventoryv1.ValidateCompatibilityRequest) (input.ValidateCompatibilityRequest, error) {
+	if req == nil {
+		return input.ValidateCompatibilityRequest{}, errs.ErrEmptyRequest
+	}
+
+	modelReq := input.ValidateCompatibilityRequest{
+		HullUUID:   req.GetHullUuid(),
+		EngineUUID: req.GetEngineUuid(),
+	}
+
+	if req.GetShieldUuid() != "" {
+		modelReq.ShieldUUID = req.GetShieldUuid()
+	}
+	if req.GetWeaponUuid() != "" {
+		modelReq.WeaponUUID = req.GetWeaponUuid()
+	}
+
+	return modelReq, nil
+}
+
+func ReservePartsRequestToModel(req *inventoryv1.ReservePartsRequest) (input.ReservePartsRequest, error) {
+	if req == nil {
+		return input.ReservePartsRequest{}, errs.ErrEmptyRequest
+	}
+
+	uuids := make([]string, 0, len(req.GetUuids()))
+	for _, partUUID := range req.GetUuids() {
+		if partUUID != "" {
+			uuids = append(uuids, partUUID)
+		}
+	}
+
+	return input.ReservePartsRequest{
+		UUIDs: uuids,
+	}, nil
+}
+
+func ReleasePartsRequestToModel(req *inventoryv1.ReleasePartsRequest) (input.ReleasePartsRequest, error) {
+	if req == nil {
+		return input.ReleasePartsRequest{}, errs.ErrEmptyRequest
+	}
+
+	uuids := make([]string, 0, len(req.GetUuids()))
+	for _, partUUID := range req.GetUuids() {
+		if partUUID != "" {
+			uuids = append(uuids, partUUID)
+		}
+	}
+
+	return input.ReleasePartsRequest{
+		UUIDs: uuids,
+	}, nil
 }

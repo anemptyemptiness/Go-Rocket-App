@@ -45,6 +45,13 @@ func TestPay_Success(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	txManager.EXPECT().
+		Do(ctx, mock.Anything).
+		RunAndReturn(func(txCtx context.Context, fn func(ctx context.Context) error) error {
+			return fn(txCtx)
+		})
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -61,7 +68,7 @@ func TestPay_Success(t *testing.T) {
 			order.PaymentMethod != nil && *order.PaymentMethod == method
 	})).Return(nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
 	trUUID, err := svc.Pay(ctx, orderUUID, method)
 	require.NoError(t, err)
@@ -80,12 +87,19 @@ func TestPay_NotFound(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	txManager.EXPECT().
+		Do(ctx, mock.Anything).
+		RunAndReturn(func(txCtx context.Context, fn func(ctx context.Context) error) error {
+			return fn(txCtx)
+		})
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
 		Return(model.Order{}, errs.ErrOrderNotFound)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
 	trUUID, err := svc.Pay(ctx, orderUUID, method)
 	require.Error(t, err)
@@ -106,6 +120,13 @@ func TestPay_PaymentMethodUnspecified(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	txManager.EXPECT().
+		Do(ctx, mock.Anything).
+		RunAndReturn(func(txCtx context.Context, fn func(ctx context.Context) error) error {
+			return fn(txCtx)
+		})
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -118,7 +139,7 @@ func TestPay_PaymentMethodUnspecified(t *testing.T) {
 		PayOrder(mock.Anything, orderUUID, method).
 		Return("", paymentError)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
 	trUUID, err := svc.Pay(ctx, orderUUID, method)
 	require.Error(t, err)
@@ -138,6 +159,13 @@ func TestPay_AlreadyPaid(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	txManager.EXPECT().
+		Do(ctx, mock.Anything).
+		RunAndReturn(func(txCtx context.Context, fn func(ctx context.Context) error) error {
+			return fn(txCtx)
+		})
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -146,7 +174,7 @@ func TestPay_AlreadyPaid(t *testing.T) {
 			Status: model.OrderStatusPaid,
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
 	trUUID, err := svc.Pay(ctx, orderUUID, method)
 	require.Error(t, err)
@@ -166,6 +194,13 @@ func TestPay_Cancelled(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	txManager.EXPECT().
+		Do(ctx, mock.Anything).
+		RunAndReturn(func(txCtx context.Context, fn func(ctx context.Context) error) error {
+			return fn(txCtx)
+		})
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -174,7 +209,7 @@ func TestPay_Cancelled(t *testing.T) {
 			Status: model.OrderStatusCancelled,
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
 	trUUID, err := svc.Pay(ctx, orderUUID, method)
 	require.Error(t, err)
@@ -195,6 +230,13 @@ func TestPay_PaymentServiceError(t *testing.T) {
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	txManager.EXPECT().
+		Do(ctx, mock.Anything).
+		RunAndReturn(func(txCtx context.Context, fn func(ctx context.Context) error) error {
+			return fn(txCtx)
+		})
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -207,7 +249,55 @@ func TestPay_PaymentServiceError(t *testing.T) {
 		PayOrder(mock.Anything, orderUUID, method).
 		Return("", unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+
+	trUUID, err := svc.Pay(ctx, orderUUID, method)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, unexpectedErr)
+	assert.Empty(t, trUUID)
+}
+
+func TestPay_UpdateError(t *testing.T) {
+	t.Parallel()
+
+	var (
+		ctx             = context.Background()
+		orderUUID       = gofakeit.UUID()
+		transactionUUID = gofakeit.UUID()
+		method          = model.PaymentMethodSBP
+		unexpectedErr   = assert.AnError
+	)
+
+	repo := mocks.NewOrderRepository(t)
+	inventoryClient := mocks.NewInventoryClient(t)
+	paymentClient := mocks.NewPaymentClient(t)
+	txManager := mocks.NewTxManager(t)
+
+	txManager.EXPECT().
+		Do(ctx, mock.Anything).
+		RunAndReturn(func(txCtx context.Context, fn func(ctx context.Context) error) error {
+			return fn(txCtx)
+		})
+
+	repo.EXPECT().
+		Get(ctx, orderUUID).
+		Return(model.Order{
+			UUID:   orderUUID,
+			Status: model.OrderStatusPendingPayment,
+		}, nil)
+
+	paymentClient.EXPECT().
+		PayOrder(mock.Anything, orderUUID, method).
+		Return(transactionUUID, nil)
+
+	repo.EXPECT().Update(ctx, mock.MatchedBy(func(order model.Order) bool {
+		return order.UUID == orderUUID &&
+			order.Status == model.OrderStatusPaid &&
+			order.TransactionUUID != nil && *order.TransactionUUID == transactionUUID &&
+			order.PaymentMethod != nil && *order.PaymentMethod == method
+	})).Return(unexpectedErr)
+
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
 	trUUID, err := svc.Pay(ctx, orderUUID, method)
 	require.Error(t, err)

@@ -17,18 +17,19 @@ import (
 
 func NewHTTPHandler(
 	orderPool *pgxpool.Pool,
-	txManager orderrepository.TxManager,
+	txManager orderservice.TxManager,
 	inventoryClientGRPC inventoryv1.InventoryServiceClient,
 	paymentClientGRPC paymentv1.PaymentServiceClient,
 ) (http.Handler, error) {
 	paymentClient := paymentclientv1.New(paymentClientGRPC)
 	inventoryClient := inventoryclientv1.New(inventoryClientGRPC)
 
-	orderRepo := orderrepository.New(orderPool, txManager)
+	orderRepo := orderrepository.New(orderPool)
 	orderSvc := orderservice.New(
 		orderRepo,
 		paymentClient,
 		inventoryClient,
+		txManager,
 	)
 	api := orderapi.NewAPI(orderSvc)
 

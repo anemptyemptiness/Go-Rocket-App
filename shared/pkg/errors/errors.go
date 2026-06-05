@@ -10,13 +10,15 @@ import (
 type Code string
 
 const (
-	CodeUnknown         Code = "unknown"
-	CodeInvalidArgument Code = "invalid_argument"
-	CodeNotFound        Code = "not_found"
-	CodeConflict        Code = "conflict"
-	CodeForbidden       Code = "forbidden"
-	CodeUnauthorized    Code = "unauthorized"
-	CodeInternal        Code = "internal"
+	CodeUnknown            Code = "unknown"
+	CodeInvalidArgument    Code = "invalid_argument"
+	CodeNotFound           Code = "not_found"
+	CodeConflict           Code = "conflict"
+	CodeForbidden          Code = "forbidden"
+	CodeUnauthorized       Code = "unauthorized"
+	CodeResourceExhausted  Code = "resource_exhausted"
+	CodeFailedPrecondition Code = "failed_precondition"
+	CodeInternal           Code = "internal"
 )
 
 var (
@@ -97,12 +99,14 @@ func NewBusinessErrorMessage(code Code, err error, message string) error {
 	return &BusinessError{code: code, cause: err, message: message}
 }
 
-func InvalidArgument(err error) error { return NewBusinessError(CodeInvalidArgument, err) }
-func NotFound(err error) error        { return NewBusinessError(CodeNotFound, err) }
-func Conflict(err error) error        { return NewBusinessError(CodeConflict, err) }
-func Forbidden(err error) error       { return NewBusinessError(CodeForbidden, err) }
-func Unauthorized(err error) error    { return NewBusinessError(CodeUnauthorized, err) }
-func Internal(err error) error        { return NewBusinessError(CodeInternal, err) }
+func InvalidArgument(err error) error    { return NewBusinessError(CodeInvalidArgument, err) }
+func NotFound(err error) error           { return NewBusinessError(CodeNotFound, err) }
+func Conflict(err error) error           { return NewBusinessError(CodeConflict, err) }
+func FailedPrecondition(err error) error { return NewBusinessError(CodeFailedPrecondition, err) }
+func ResourceExhausted(err error) error  { return NewBusinessError(CodeResourceExhausted, err) }
+func Forbidden(err error) error          { return NewBusinessError(CodeForbidden, err) }
+func Unauthorized(err error) error       { return NewBusinessError(CodeUnauthorized, err) }
+func Internal(err error) error           { return NewBusinessError(CodeInternal, err) }
 
 func IsBusinessError(err error) bool {
 	var be *BusinessError
@@ -129,6 +133,10 @@ func (c Code) GRPCCode() codes.Code {
 		return codes.PermissionDenied
 	case CodeUnauthorized:
 		return codes.Unauthenticated
+	case CodeResourceExhausted:
+		return codes.ResourceExhausted
+	case CodeFailedPrecondition:
+		return codes.FailedPrecondition
 	case CodeInternal:
 		return codes.Internal
 	default:
@@ -148,6 +156,10 @@ func (c Code) HTTPCode() int {
 		return http.StatusForbidden
 	case CodeUnauthorized:
 		return http.StatusUnauthorized
+	case CodeFailedPrecondition:
+		return http.StatusConflict
+	case CodeResourceExhausted:
+		return http.StatusConflict
 	case CodeInternal:
 		return http.StatusInternalServerError
 	default:

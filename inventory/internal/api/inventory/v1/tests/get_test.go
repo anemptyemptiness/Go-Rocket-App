@@ -14,7 +14,8 @@ import (
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1/mocks"
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/valueobject"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -40,6 +41,8 @@ func TestGetPart(t *testing.T) {
 
 		now = time.Now()
 	)
+
+	hull := entity.RestorePart(hullUUID, "hull", "hull-desc", 10000, 10, 0, valueobject.PartTypeHull, nil, now)
 
 	tests := []struct {
 		name      string
@@ -71,15 +74,7 @@ func TestGetPart(t *testing.T) {
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
 					GetPart(ctx, hullUUID).
-					Return(model.Part{
-						UUID:          hullUUID,
-						Name:          "hull",
-						Description:   "hull-desc",
-						Price:         10000,
-						PartType:      model.PartTypeHull,
-						StockQuantity: 10,
-						CreatedAt:     now,
-					}, nil)
+					Return(hull, nil)
 			},
 		},
 		{
@@ -107,7 +102,7 @@ func TestGetPart(t *testing.T) {
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
 					GetPart(ctx, hullUUID).
-					Return(model.Part{}, errs.ErrPartNotFound)
+					Return(entity.Part{}, errs.ErrPartNotFound)
 			},
 		},
 		{
@@ -124,7 +119,7 @@ func TestGetPart(t *testing.T) {
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
 					GetPart(ctx, hullUUIDEmpty).
-					Return(model.Part{}, errs.ErrPartUUIDIsEmpty)
+					Return(entity.Part{}, errs.ErrPartUUIDIsEmpty)
 			},
 		},
 		{
@@ -141,7 +136,7 @@ func TestGetPart(t *testing.T) {
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
 					GetPart(ctx, hullUUID).
-					Return(model.Part{}, internalError)
+					Return(entity.Part{}, internalError)
 			},
 		},
 		{
@@ -158,7 +153,7 @@ func TestGetPart(t *testing.T) {
 			setupMock: func(svc *mocks.InventoryService) {
 				svc.EXPECT().
 					GetPart(ctx, uuid.Nil.String()).
-					Return(model.Part{}, errs.ErrPartUUIDInvalid)
+					Return(entity.Part{}, errs.ErrPartUUIDInvalid)
 			},
 		},
 	}

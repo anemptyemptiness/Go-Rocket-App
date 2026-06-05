@@ -8,12 +8,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/valueobject"
 	repoConverter "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/converter"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/record"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/input"
 )
 
-func (r *repository) GetPart(ctx context.Context, uuid string) (model.Part, error) {
+func (r *repository) GetPart(ctx context.Context, uuid string) (entity.Part, error) {
 	const query = `
 		SELECT 
 			p.uuid,
@@ -22,6 +24,8 @@ func (r *repository) GetPart(ctx context.Context, uuid string) (model.Part, erro
 			p.part_type,
 			p.price,
 			p.stock_quantity,
+			p.reserved,
+			p.properties,
 			p.created_at
 		FROM parts AS p
 		WHERE p.uuid = $1;`
@@ -35,19 +39,21 @@ func (r *repository) GetPart(ctx context.Context, uuid string) (model.Part, erro
 		&part.PartType,
 		&part.Price,
 		&part.StockQuantity,
+		&part.Reserved,
+		&part.PartProperties,
 		&part.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return model.Part{}, fmt.Errorf("%w: uuid=%s", errs.ErrPartNotFound, uuid)
+			return entity.Part{}, fmt.Errorf("%w: uuid=%s", errs.ErrPartNotFound, uuid)
 		}
-		return model.Part{}, err
+		return entity.Part{}, err
 	}
 
-	return repoConverter.PartRecordToModel(part), nil
+	return repoConverter.PartRecordToModel(part)
 }
 
-func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+func (r *repository) ListParts(ctx context.Context, filter input.PartFilter) ([]entity.Part, error) {
 	query := `
 		SELECT
 			p.uuid,
@@ -56,6 +62,8 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 			p.part_type,
 			p.price,
 			p.stock_quantity,
+			p.reserved,
+			p.properties,
 			p.created_at
 		FROM parts AS p `
 
@@ -67,7 +75,7 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 			WHERE p.uuid = ANY($1::UUID[])
 			ORDER BY ARRAY_POSITION($1::UUID[], p.uuid);`
 		args = append(args, filter.UUIDs)
-	case filter.PartType != "" && filter.PartType != model.PartTypeUnspecified:
+	case filter.PartType != "" && filter.PartType != valueobject.PartTypeUnspecified:
 		query += `
 			WHERE p.part_type = $1::VARCHAR
 			ORDER BY p.name ASC;`
@@ -90,5 +98,5 @@ func (r *repository) ListParts(ctx context.Context, filter model.PartFilter) ([]
 		return nil, err
 	}
 
-	return repoConverter.PartsRecordToModel(parts), nil
+	return repoConverter.PartsRecordToModel(parts)
 }

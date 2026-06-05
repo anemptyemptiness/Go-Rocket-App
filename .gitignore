@@ -6,3 +6,10 @@ bin
 inventory.env
 order.env
 payment.env
+
+./inventory/config.local.yaml
+./inventory/config.production.yaml
+./payment/config.local.yaml
+./payment/config.production.yaml
+./order/config.local.yaml
+./order/config.production.yaml

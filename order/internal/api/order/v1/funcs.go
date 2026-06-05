@@ -36,6 +36,8 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 			pkgerr.WithBadRequest[orderv1.CreateOrderBadRequest](),
 			pkgerr.WithNotFound[orderv1.CreateOrderNotFound](),
 			pkgerr.WithConflict[orderv1.CreateOrderConflict](),
+			pkgerr.WithFailedPrecondition[orderv1.CreateOrderConflict](),
+			pkgerr.WithResourceExhausted[orderv1.CreateOrderConflict](),
 			pkgerr.WithInternal[orderv1.CreateOrderInternalServerError](),
 		)
 	}
@@ -60,6 +62,8 @@ func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params
 			pkgerr.WithBadRequest[orderv1.PayOrderBadRequest](),
 			pkgerr.WithNotFound[orderv1.PayOrderNotFound](),
 			pkgerr.WithConflict[orderv1.PayOrderConflict](),
+			pkgerr.WithFailedPrecondition[orderv1.PayOrderConflict](),
+			pkgerr.WithResourceExhausted[orderv1.PayOrderConflict](),
 			pkgerr.WithInternal[orderv1.PayOrderInternalServerError](),
 		)
 	}
@@ -73,8 +77,11 @@ func (a *api) CancelOrder(ctx context.Context, params orderv1.CancelOrderParams)
 	err := a.orderService.Cancel(ctx, params.OrderUUID.String())
 	if err != nil {
 		return pkgerr.MapHTTPError[orderv1.CancelOrderRes](err,
+			pkgerr.WithBadRequest[orderv1.CancelOrderBadRequest](),
 			pkgerr.WithNotFound[orderv1.CancelOrderNotFound](),
 			pkgerr.WithConflict[orderv1.CancelOrderConflict](),
+			pkgerr.WithFailedPrecondition[orderv1.CancelOrderConflict](),
+			pkgerr.WithResourceExhausted[orderv1.CancelOrderConflict](),
 			pkgerr.WithInternal[orderv1.CancelOrderInternalServerError](),
 		)
 	}

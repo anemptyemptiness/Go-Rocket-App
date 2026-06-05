@@ -117,6 +117,36 @@ func (c *inventoryServiceClient) CommitParts(ctx context.Context, in *CommitPart
 	return out, nil
 }
 
+func (c *inventoryServiceClient) ValidateCompatibility(ctx context.Context, in *ValidateCompatibilityRequest, opts ...grpc.CallOption) (*ValidateCompatibilityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateCompatibilityResponse)
+	err := c.cc.Invoke(ctx, InventoryService_ValidateCompatibility_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inventoryServiceClient) ReserveParts(ctx context.Context, in *ReservePartsRequest, opts ...grpc.CallOption) (*ReservePartsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReservePartsResponse)
+	err := c.cc.Invoke(ctx, InventoryService_ReserveParts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inventoryServiceClient) ReleaseParts(ctx context.Context, in *ReleasePartsRequest, opts ...grpc.CallOption) (*ReleasePartsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleasePartsResponse)
+	err := c.cc.Invoke(ctx, InventoryService_ReleaseParts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InventoryServiceServer is the server API for InventoryService service.
 // All implementations must embed UnimplementedInventoryServiceServer
 // for forward compatibility.
