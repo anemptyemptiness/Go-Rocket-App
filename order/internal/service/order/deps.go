@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 )
 
 type OrderRepository interface {
@@ -14,7 +15,7 @@ type OrderRepository interface {
 
 type InventoryClient interface {
 	ListParts(ctx context.Context, uuids []string) ([]model.Part, error)
-	ValidateCompatibility(ctx context.Context, uuids model.CreateOrderRequest) error
+	ValidateCompatibility(ctx context.Context, uuids input.CreateOrderRequest) error
 	ReserveParts(ctx context.Context, uuids []string) error
 	ReleaseParts(ctx context.Context, uuids []string) error
 }

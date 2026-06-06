@@ -390,13 +390,18 @@ func (s *CreateOrderRequest) encodeFields(e *jx.Encoder) {
 			s.WeaponUUID.Encode(e)
 		}
 	}
+	{
+		e.FieldStart("user_uuid")
+		json.EncodeUUID(e, s.UserUUID)
+	}
 }
 
-var jsonFieldsNameOfCreateOrderRequest = [4]string{
+var jsonFieldsNameOfCreateOrderRequest = [5]string{
 	0: "hull_uuid",
 	1: "engine_uuid",
 	2: "shield_uuid",
 	3: "weapon_uuid",
+	4: "user_uuid",
 }
 
 // Decode decodes CreateOrderRequest from json.
@@ -452,6 +457,18 @@ func (s *CreateOrderRequest) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"weapon_uuid\"")
 			}
+		case "user_uuid":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.UserUUID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"user_uuid\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -462,7 +479,7 @@ func (s *CreateOrderRequest) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00010011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -1002,22 +1019,27 @@ func (s *OrderDto) encodeFields(e *jx.Encoder) {
 		s.Status.Encode(e)
 	}
 	{
+		e.FieldStart("user_uuid")
+		json.EncodeUUID(e, s.UserUUID)
+	}
+	{
 		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
 }
 
-var jsonFieldsNameOfOrderDto = [10]string{
-	0: "order_uuid",
-	1: "hull_uuid",
-	2: "engine_uuid",
-	3: "shield_uuid",
-	4: "weapon_uuid",
-	5: "total_price",
-	6: "transaction_uuid",
-	7: "payment_method",
-	8: "status",
-	9: "created_at",
+var jsonFieldsNameOfOrderDto = [11]string{
+	0:  "order_uuid",
+	1:  "hull_uuid",
+	2:  "engine_uuid",
+	3:  "shield_uuid",
+	4:  "weapon_uuid",
+	5:  "total_price",
+	6:  "transaction_uuid",
+	7:  "payment_method",
+	8:  "status",
+	9:  "user_uuid",
+	10: "created_at",
 }
 
 // Decode decodes OrderDto from json.
@@ -1127,8 +1149,20 @@ func (s *OrderDto) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"status\"")
 			}
-		case "created_at":
+		case "user_uuid":
 			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.UserUUID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"user_uuid\"")
+			}
+		case "created_at":
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -1150,7 +1184,7 @@ func (s *OrderDto) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b00100111,
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

@@ -12,6 +12,7 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	svcmocks "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
@@ -30,7 +31,7 @@ func TestCreate_Success(t *testing.T) {
 		now        = time.Now()
 	)
 
-	req := model.CreateOrderRequest{
+	req := input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 		ShieldUUID: &shieldUUID,
@@ -152,7 +153,7 @@ func TestCreate_HullAndEngineRequired(t *testing.T) {
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUIDEmpty,
 		EngineUUID: engineUUIDEmpty,
 	})
@@ -188,7 +189,7 @@ func TestCreate_PartNotFound(t *testing.T) {
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 	})
@@ -241,7 +242,7 @@ func TestCreate_PartIsOver(t *testing.T) {
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 	})
@@ -296,7 +297,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		Return(parts, nil)
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
 		}).
@@ -304,7 +305,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 	})
@@ -359,7 +360,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		Return(parts, nil)
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
 		}).
@@ -371,7 +372,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 	})
@@ -443,7 +444,7 @@ func TestCreate_RepoError(t *testing.T) {
 	}
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
 		}).
@@ -459,7 +460,7 @@ func TestCreate_RepoError(t *testing.T) {
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 	})
@@ -485,7 +486,7 @@ func TestCreate_PartUUIDInvalid(t *testing.T) {
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
 		WeaponUUID: &weaponUUID,

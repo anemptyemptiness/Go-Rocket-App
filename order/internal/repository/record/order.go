@@ -10,6 +10,7 @@ type OrderStatus string
 
 type Order struct {
 	Uuid            string         `db:"uuid"`
+	UserUuid        string         `db:"user_uuid"`
 	TotalPrice      int64          `db:"total_price"`
 	Status          OrderStatus    `db:"status"`
 	TransactionUUID *string        `db:"transaction_uuid"`

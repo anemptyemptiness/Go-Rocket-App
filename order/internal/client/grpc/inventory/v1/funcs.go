@@ -9,6 +9,7 @@ import (
 
 	clientConverter "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1/converter"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
@@ -33,7 +34,7 @@ func (c *client) ListParts(ctx context.Context, uuids []string) ([]model.Part, e
 	return clientConverter.ListPartsClientResponseProtoToModel(resp)
 }
 
-func (c *client) ValidateCompatibility(ctx context.Context, uuids model.CreateOrderRequest) error {
+func (c *client) ValidateCompatibility(ctx context.Context, uuids input.CreateOrderRequest) error {
 	_, err := c.inventoryClient.ValidateCompatibility(ctx, clientConverter.ModelPartsToValidateCompatibilityRequest(uuids))
 	if err != nil {
 		switch status.Code(err) {

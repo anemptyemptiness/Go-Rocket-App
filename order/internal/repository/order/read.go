@@ -33,6 +33,7 @@ func (r *repository) get(ctx context.Context, orderUUID string) (record.Order, e
 	const queryOrder = `
 		SELECT
 			o.uuid,
+			o.user_uuid,
 			o.total_price,
 			o."status",
 			o.transaction_uuid,
@@ -46,6 +47,7 @@ func (r *repository) get(ctx context.Context, orderUUID string) (record.Order, e
 
 	err := r.getter.DefaultTrOrDB(ctx, r.pool).QueryRow(ctx, queryOrder, orderUUID).Scan(
 		&order.Uuid,
+		&order.UserUuid,
 		&order.TotalPrice,
 		&order.Status,
 		&order.TransactionUUID,

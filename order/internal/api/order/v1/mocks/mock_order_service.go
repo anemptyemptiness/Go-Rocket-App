@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -99,7 +100,7 @@ func (_c *OrderService_Cancel_Call) RunAndReturn(run func(ctx context.Context, o
 }
 
 // Create provides a mock function for the type OrderService
-func (_mock *OrderService) Create(ctx context.Context, req model.CreateOrderRequest) (model.Order, error) {
+func (_mock *OrderService) Create(ctx context.Context, req input.CreateOrderRequest) (model.Order, error) {
 	ret := _mock.Called(ctx, req)
 
 	if len(ret) == 0 {
@@ -108,15 +109,15 @@ func (_mock *OrderService) Create(ctx context.Context, req model.CreateOrderRequ
 
 	var r0 model.Order
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.CreateOrderRequest) (model.Order, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.CreateOrderRequest) (model.Order, error)); ok {
 		return returnFunc(ctx, req)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.CreateOrderRequest) model.Order); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.CreateOrderRequest) model.Order); ok {
 		r0 = returnFunc(ctx, req)
 	} else {
 		r0 = ret.Get(0).(model.Order)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, model.CreateOrderRequest) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, input.CreateOrderRequest) error); ok {
 		r1 = returnFunc(ctx, req)
 	} else {
 		r1 = ret.Error(1)
@@ -131,20 +132,20 @@ type OrderService_Create_Call struct {
 
 // Create is a helper method to define mock.On call
 //   - ctx context.Context
-//   - req model.CreateOrderRequest
+//   - req input.CreateOrderRequest
 func (_e *OrderService_Expecter) Create(ctx interface{}, req interface{}) *OrderService_Create_Call {
 	return &OrderService_Create_Call{Call: _e.mock.On("Create", ctx, req)}
 }
 
-func (_c *OrderService_Create_Call) Run(run func(ctx context.Context, req model.CreateOrderRequest)) *OrderService_Create_Call {
+func (_c *OrderService_Create_Call) Run(run func(ctx context.Context, req input.CreateOrderRequest)) *OrderService_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 model.CreateOrderRequest
+		var arg1 input.CreateOrderRequest
 		if args[1] != nil {
-			arg1 = args[1].(model.CreateOrderRequest)
+			arg1 = args[1].(input.CreateOrderRequest)
 		}
 		run(
 			arg0,
@@ -159,7 +160,7 @@ func (_c *OrderService_Create_Call) Return(order model.Order, err error) *OrderS
 	return _c
 }
 
-func (_c *OrderService_Create_Call) RunAndReturn(run func(ctx context.Context, req model.CreateOrderRequest) (model.Order, error)) *OrderService_Create_Call {
+func (_c *OrderService_Create_Call) RunAndReturn(run func(ctx context.Context, req input.CreateOrderRequest) (model.Order, error)) *OrderService_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }

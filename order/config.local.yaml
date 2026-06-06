@@ -21,3 +21,13 @@ pg:
   user: "order-service-user"
   password: "order-service-password"
   sslmode: "disable"
+
+kafka:
+  external_port: "9092"
+  internal_port: "29092"
+  controller_port: "29093"
+  ui_port: "8090"
+
+  topic:
+    pay: "order.paid"
+    assembly: "assembly.ship-assembled"

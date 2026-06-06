@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -224,7 +225,7 @@ func (_c *InventoryClient_ReserveParts_Call) RunAndReturn(run func(ctx context.C
 }
 
 // ValidateCompatibility provides a mock function for the type InventoryClient
-func (_mock *InventoryClient) ValidateCompatibility(ctx context.Context, uuids model.CreateOrderRequest) error {
+func (_mock *InventoryClient) ValidateCompatibility(ctx context.Context, uuids input.CreateOrderRequest) error {
 	ret := _mock.Called(ctx, uuids)
 
 	if len(ret) == 0 {
@@ -232,7 +233,7 @@ func (_mock *InventoryClient) ValidateCompatibility(ctx context.Context, uuids m
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, model.CreateOrderRequest) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.CreateOrderRequest) error); ok {
 		r0 = returnFunc(ctx, uuids)
 	} else {
 		r0 = ret.Error(0)
@@ -247,20 +248,20 @@ type InventoryClient_ValidateCompatibility_Call struct {
 
 // ValidateCompatibility is a helper method to define mock.On call
 //   - ctx context.Context
-//   - uuids model.CreateOrderRequest
+//   - uuids input.CreateOrderRequest
 func (_e *InventoryClient_Expecter) ValidateCompatibility(ctx interface{}, uuids interface{}) *InventoryClient_ValidateCompatibility_Call {
 	return &InventoryClient_ValidateCompatibility_Call{Call: _e.mock.On("ValidateCompatibility", ctx, uuids)}
 }
 
-func (_c *InventoryClient_ValidateCompatibility_Call) Run(run func(ctx context.Context, uuids model.CreateOrderRequest)) *InventoryClient_ValidateCompatibility_Call {
+func (_c *InventoryClient_ValidateCompatibility_Call) Run(run func(ctx context.Context, uuids input.CreateOrderRequest)) *InventoryClient_ValidateCompatibility_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 model.CreateOrderRequest
+		var arg1 input.CreateOrderRequest
 		if args[1] != nil {
-			arg1 = args[1].(model.CreateOrderRequest)
+			arg1 = args[1].(input.CreateOrderRequest)
 		}
 		run(
 			arg0,
@@ -275,7 +276,7 @@ func (_c *InventoryClient_ValidateCompatibility_Call) Return(err error) *Invento
 	return _c
 }
 
-func (_c *InventoryClient_ValidateCompatibility_Call) RunAndReturn(run func(ctx context.Context, uuids model.CreateOrderRequest) error) *InventoryClient_ValidateCompatibility_Call {
+func (_c *InventoryClient_ValidateCompatibility_Call) RunAndReturn(run func(ctx context.Context, uuids input.CreateOrderRequest) error) *InventoryClient_ValidateCompatibility_Call {
 	_c.Call.Return(run)
 	return _c
 }

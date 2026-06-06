@@ -14,6 +14,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1/mocks"
 	ordererrs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
@@ -65,7 +66,7 @@ func TestCreateOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Create(ctx, model.CreateOrderRequest{
+					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
 						ShieldUUID: &shieldUUID,
@@ -108,7 +109,7 @@ func TestCreateOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Create(ctx, model.CreateOrderRequest{
+					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   uuid.Nil.String(),
 						EngineUUID: engineUUID,
 					}).
@@ -132,7 +133,7 @@ func TestCreateOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Create(ctx, model.CreateOrderRequest{
+					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
 					}).
@@ -156,7 +157,7 @@ func TestCreateOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Create(ctx, model.CreateOrderRequest{
+					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
 					}).
@@ -180,7 +181,7 @@ func TestCreateOrder(t *testing.T) {
 			},
 			setupMock: func(svc *mocks.OrderService) {
 				svc.EXPECT().
-					Create(ctx, model.CreateOrderRequest{
+					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
 					}).

@@ -8,6 +8,7 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
@@ -23,9 +24,12 @@ func (s *service) Get(ctx context.Context, orderUUID string) (model.Order, error
 	return order, nil
 }
 
-func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (model.Order, error) {
+func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (model.Order, error) {
 	if req.HullUUID == "" || req.EngineUUID == "" {
 		return model.Order{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
+	}
+	if req.UserUUID == "" {
+		return model.Order{}, pkgerr.InvalidArgument(errs.ErrUserUUIDIsRequired)
 	}
 
 	seen := make(map[string]struct{})
@@ -67,6 +71,7 @@ func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
+		order.UserUUID = req.UserUUID
 		order.Items = orderItems
 		order.TotalPrice = totalPrice
 		order.Status = model.OrderStatusPendingPayment
