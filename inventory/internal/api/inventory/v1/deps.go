@@ -13,4 +13,5 @@ type InventoryService interface {
 	ValidateCompatibility(ctx context.Context, req input.ValidateCompatibilityRequest) error
 	ReserveParts(ctx context.Context, req input.ReservePartsRequest) error
 	ReleaseParts(ctx context.Context, req input.ReleasePartsRequest) error
+	CommitParts(ctx context.Context, req input.CommitPartsRequest) error
 }

@@ -34,3 +34,7 @@ type ReservePartsRequest struct {
 type ReleasePartsRequest struct {
 	UUIDs []string
 }
+
+type CommitPartsRequest struct {
+	UUIDs []string
+}

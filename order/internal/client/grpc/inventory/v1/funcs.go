@@ -99,3 +99,25 @@ func (c *client) ReleaseParts(ctx context.Context, uuids []string) error {
 
 	return nil
 }
+
+func (c *client) CommitParts(ctx context.Context, uuids []string) error {
+	_, err := c.inventoryClient.CommitParts(ctx, &inventoryv1.CommitPartsRequest{Uuids: uuids})
+	if err != nil {
+		switch status.Code(err) {
+		case codes.NotFound:
+			return pkgerr.NotFound(err)
+		case codes.InvalidArgument:
+			return pkgerr.InvalidArgument(err)
+		case codes.FailedPrecondition:
+			return pkgerr.FailedPrecondition(err)
+		case codes.ResourceExhausted:
+			return pkgerr.ResourceExhausted(err)
+		case codes.Internal:
+			return pkgerr.Internal(err)
+		default:
+			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+	}
+
+	return nil
+}

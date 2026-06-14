@@ -42,6 +42,7 @@ func TestCreate_Success(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txmanager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txmanager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -118,7 +119,7 @@ func TestCreate_Success(t *testing.T) {
 		Create(ctx, order).
 		Return(orderUUID, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txmanager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txmanager, producer)
 
 	order, err := svc.Create(ctx, req)
 	require.NoError(t, err)
@@ -150,8 +151,9 @@ func TestCreate_HullAndEngineRequired(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUIDEmpty,
@@ -175,6 +177,7 @@ func TestCreate_PartNotFound(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -187,7 +190,7 @@ func TestCreate_PartNotFound(t *testing.T) {
 		ListParts(mock.Anything, []string{hullUUID, engineUUID}).
 		Return(nil, pkgerr.NotFound(assert.AnError))
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -211,6 +214,7 @@ func TestCreate_PartIsOver(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -240,7 +244,7 @@ func TestCreate_PartIsOver(t *testing.T) {
 			},
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -284,6 +288,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -303,7 +308,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		}).
 		Return(unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -347,6 +352,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -370,7 +376,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		ReserveParts(mock.Anything, []string{hullUUID, engineUUID}).
 		Return(unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -414,6 +420,7 @@ func TestCreate_RepoError(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -458,7 +465,7 @@ func TestCreate_RepoError(t *testing.T) {
 		Create(ctx, order).
 		Return("", unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -483,8 +490,9 @@ func TestCreate_PartUUIDInvalid(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,

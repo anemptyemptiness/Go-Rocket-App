@@ -27,6 +27,7 @@ func TestGet_Success(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -47,7 +48,7 @@ func TestGet_Success(t *testing.T) {
 			CreatedAt:  time.Now(),
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Get(ctx, orderUUID)
 	require.NoError(t, err)
@@ -70,12 +71,13 @@ func TestGet_NotFound(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
 		Return(model.Order{}, errs.ErrOrderNotFound)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Get(ctx, orderUUID)
 	require.Error(t, err)
@@ -96,12 +98,13 @@ func TestGet_RepoError(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
 		Return(model.Order{}, unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	order, err := svc.Get(ctx, orderUUID)
 	require.Error(t, err)

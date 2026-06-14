@@ -118,3 +118,20 @@ func ReleasePartsRequestToModel(req *inventoryv1.ReleasePartsRequest) (input.Rel
 		UUIDs: uuids,
 	}, nil
 }
+
+func CommitPartsRequestToModel(req *inventoryv1.CommitPartsRequest) (input.CommitPartsRequest, error) {
+	if req == nil {
+		return input.CommitPartsRequest{}, errs.ErrEmptyRequest
+	}
+
+	uuids := make([]string, 0, len(req.GetUuids()))
+	for _, partUUID := range req.GetUuids() {
+		if partUUID != "" {
+			uuids = append(uuids, partUUID)
+		}
+	}
+
+	return input.CommitPartsRequest{
+		UUIDs: uuids,
+	}, nil
+}

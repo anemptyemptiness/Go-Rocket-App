@@ -42,6 +42,63 @@ func (_m *InventoryService) EXPECT() *InventoryService_Expecter {
 	return &InventoryService_Expecter{mock: &_m.Mock}
 }
 
+// CommitParts provides a mock function for the type InventoryService
+func (_mock *InventoryService) CommitParts(ctx context.Context, req input.CommitPartsRequest) error {
+	ret := _mock.Called(ctx, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CommitParts")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.CommitPartsRequest) error); ok {
+		r0 = returnFunc(ctx, req)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// InventoryService_CommitParts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CommitParts'
+type InventoryService_CommitParts_Call struct {
+	*mock.Call
+}
+
+// CommitParts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req input.CommitPartsRequest
+func (_e *InventoryService_Expecter) CommitParts(ctx interface{}, req interface{}) *InventoryService_CommitParts_Call {
+	return &InventoryService_CommitParts_Call{Call: _e.mock.On("CommitParts", ctx, req)}
+}
+
+func (_c *InventoryService_CommitParts_Call) Run(run func(ctx context.Context, req input.CommitPartsRequest)) *InventoryService_CommitParts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 input.CommitPartsRequest
+		if args[1] != nil {
+			arg1 = args[1].(input.CommitPartsRequest)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *InventoryService_CommitParts_Call) Return(err error) *InventoryService_CommitParts_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *InventoryService_CommitParts_Call) RunAndReturn(run func(ctx context.Context, req input.CommitPartsRequest) error) *InventoryService_CommitParts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetPart provides a mock function for the type InventoryService
 func (_mock *InventoryService) GetPart(ctx context.Context, uuid string) (entity.Part, error) {
 	ret := _mock.Called(ctx, uuid)

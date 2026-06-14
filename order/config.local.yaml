@@ -23,11 +23,12 @@ pg:
   sslmode: "disable"
 
 kafka:
-  external_port: "9092"
-  internal_port: "29092"
-  controller_port: "29093"
-  ui_port: "8090"
+  brokers:
+    - "localhost:9092"
 
-  topic:
-    pay: "order.paid"
-    assembly: "assembly.ship-assembled"
+ship_assembled_consumer:
+  topic: "assembly.ship-assembled"
+  group_id: "2"
+
+order_paid_producer:
+  topic: "order.paid"

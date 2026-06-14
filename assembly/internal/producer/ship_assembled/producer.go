@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/service/assembly"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka"
 	eventsv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/events/v1"
 )
@@ -15,7 +16,7 @@ type service struct {
 	shipAssembledProducer Producer
 }
 
-func New(shipAssembledProducer Producer) *service {
+func New(shipAssembledProducer Producer) assembly.ShipAssembledProducerService {
 	return &service{
 		shipAssembledProducer: shipAssembledProducer,
 	}

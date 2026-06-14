@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IBM/sarama"
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/google/uuid"
@@ -34,6 +35,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/pkg/app"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/tests/testutil"
 	payApp "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/producer"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
@@ -230,8 +232,22 @@ func TestMain(m *testing.M) {
 	}
 	paymentClient = paymentv1.NewPaymentServiceClient(payConn)
 
-	// 10. Order HTTP через httptest
-	orderServer, err := app.NewHTTPHandler(orderPool, txManager, inventoryClient, paymentClient)
+	// 10. Kafka Producer
+	producerCfg := sarama.NewConfig()
+	producerCfg.Version = sarama.V4_0_0_0
+	producerCfg.Producer.Return.Successes = true
+	producerCfg.Producer.RequiredAcks = sarama.WaitForAll
+	producerCfg.Producer.Retry.Max = 5
+
+	syncProducer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, producerCfg)
+	if err != nil {
+		panic(err)
+	}
+
+	p := producer.NewProducer(syncProducer, "order.paid")
+
+	// 11. Order HTTP через httptest
+	orderServer, err := app.NewHTTPHandler(orderPool, txManager, inventoryClient, paymentClient, p)
 	if err != nil {
 		panic(err)
 	}

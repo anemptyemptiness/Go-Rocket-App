@@ -18,6 +18,7 @@ type InventoryClient interface {
 	ValidateCompatibility(ctx context.Context, uuids input.CreateOrderRequest) error
 	ReserveParts(ctx context.Context, uuids []string) error
 	ReleaseParts(ctx context.Context, uuids []string) error
+	CommitParts(ctx context.Context, uuids []string) error
 }
 
 type PaymentClient interface {
@@ -26,4 +27,8 @@ type PaymentClient interface {
 
 type TxManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
+type OrderPaidProducerService interface {
+	Produce(ctx context.Context, event model.OrderPaidEvent) error
 }

@@ -11,11 +11,13 @@ import (
 var appConfig *config
 
 type config struct {
-	HTTP   httpConfig   `yaml:"http"`
-	GRPC   grpcConfig   `yaml:"grpc"`
-	Logger loggerConfig `yaml:"logger"`
-	PG     pgConfig     `yaml:"pg"`
-	Kafka  kafkaConfig  `yaml:"kafka"`
+	HTTP                  httpConfig            `yaml:"http"`
+	GRPC                  grpcConfig            `yaml:"grpc"`
+	Logger                loggerConfig          `yaml:"logger"`
+	PG                    pgConfig              `yaml:"pg"`
+	Kafka                 kafkaConfig           `yaml:"kafka"`
+	OrderPaidProducer     orderPaidProducer     `yaml:"order_paid_producer"`
+	ShipAssembledConsumer shipAssembledConsumer `yaml:"ship_assembled_consumer"`
 }
 
 const defaultConfigPath = "config.local.yaml"

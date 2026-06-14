@@ -29,6 +29,7 @@ func TestCancel_Success(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -51,7 +52,7 @@ func TestCancel_Success(t *testing.T) {
 			order.Status == model.OrderStatusCancelled
 	})).Return(nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	err := svc.Cancel(ctx, orderUUID)
 	require.NoError(t, err)
@@ -69,12 +70,13 @@ func TestCancel_NotFound(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
 		Return(model.Order{}, errs.ErrOrderNotFound)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	err := svc.Cancel(ctx, orderUUID)
 	require.Error(t, err)
@@ -94,6 +96,7 @@ func TestCancel_AlreadyPaid(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -102,7 +105,7 @@ func TestCancel_AlreadyPaid(t *testing.T) {
 			Status: status,
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	err := svc.Cancel(ctx, orderUUID)
 	require.Error(t, err)
@@ -122,6 +125,7 @@ func TestCancel_AlreadyCancelled(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -130,7 +134,7 @@ func TestCancel_AlreadyCancelled(t *testing.T) {
 			Status: status,
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	err := svc.Cancel(ctx, orderUUID)
 	require.Error(t, err)
@@ -151,6 +155,7 @@ func TestCancel_ReleasePartsError(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -168,7 +173,7 @@ func TestCancel_ReleasePartsError(t *testing.T) {
 		ReleaseParts(mock.Anything, []string{partUUID}).
 		Return(unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	err := svc.Cancel(ctx, orderUUID)
 	require.Error(t, err)
@@ -189,6 +194,7 @@ func TestCancel_UpdateError(t *testing.T) {
 	inventoryClient := mocks.NewInventoryClient(t)
 	paymentClient := mocks.NewPaymentClient(t)
 	txManager := mocks.NewTxManager(t)
+	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
 		Get(ctx, orderUUID).
@@ -211,7 +217,7 @@ func TestCancel_UpdateError(t *testing.T) {
 			order.Status == model.OrderStatusCancelled
 	})).Return(unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
 	err := svc.Cancel(ctx, orderUUID)
 	require.Error(t, err)

@@ -1,5 +1,5 @@
 assembler:
-  limit: "15"
+  limit: 15
 
 kafka:
   brokers:
