@@ -7,13 +7,13 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/app"
-	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/config"
+	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/app"
+	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/config"
 )
 
 func main() {
 	// .env опционален — ошибка загрузки допустима.
-	_ = godotenv.Load("../inventory.env") //nolint:gosec // G104: ошибка загрузки допустима.
+	_ = godotenv.Load("../core.env") //nolint:gosec // .env файл опционален — ошибка загрузки допустима
 
 	configPath := config.ResolveConfigPath()
 
