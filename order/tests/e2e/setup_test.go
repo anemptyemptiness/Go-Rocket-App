@@ -40,17 +40,19 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
-	assemblyApp "github.com/anemptyemptiness/Go-Rocket-App/assembly/pkg/app"
 	invApp "github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
 	inventoryClientPkg "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
-	assemblyconsumer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/assembly_consumer"
-	orderProducer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/producer/order_producer"
+	assemblyconsumer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/ship_assembled"
 	orderRepoPkg "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/pkg/app"
 	payApp "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka"
 	wrappedKafkaConsumer "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/consumer"
 	wrappedKafkaProducer "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/producer"
+	eventsv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/events/v1"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
@@ -143,16 +145,15 @@ func runMain(m *testing.M) int {
 	cleanups.add("order sarama producer", func(_ context.Context) error { return syncProducer.Close() })
 
 	orderPaidKafkaProducer := wrappedKafkaProducer.NewProducer(syncProducer, orderPaidTopic)
-	realOrderProducer := orderProducer.New(orderPaidKafkaProducer)
 
-	// 7. Order HTTP-сервер с реальным продьюсером (НЕ noopProducer как в api_test)
-	handler := mustNew(app.NewHTTPHandlerWithProducer(orderPool, txManager, inventoryClient, paymentClient, realOrderProducer))
+	// 7. Order HTTP-сервер с реальным продюсером (НЕ noopProducer как в api_test)
+	handler := mustNew(app.NewHTTPHandler(orderPool, txManager, inventoryClient, paymentClient, orderPaidKafkaProducer))
 	ts = httptest.NewServer(handler)
 	cleanups.add("httptest server", func(_ context.Context) error { ts.Close(); return nil })
 
 	// 8. Order ShipAssembled-консьюмер — реальный код из internal/consumer/assembly_consumer.
 	// Слушает топик ShipAssembled и переводит заказ в ASSEMBLED через CommitParts
-	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, txManager, inventoryClient)
+	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, inventoryClient)
 
 	// 9. Реальный AssemblyService — тот же код, что в проде.
 	// build_time_sec выставлен в 0, чтобы цепочка пробегала за миллисекунды
@@ -327,7 +328,6 @@ func startOrderShipAssembledConsumer(
 	cleanups *cleanupStack,
 	broker string,
 	pool *pgxpool.Pool,
-	txManager *manager.Manager,
 	invClient inventoryv1.InventoryServiceClient,
 ) {
 	cg := mustNew(sarama.NewConsumerGroup([]string{broker}, orderGroupID, consumerConfig()))
@@ -338,11 +338,11 @@ func startOrderShipAssembledConsumer(
 	// Реальный код из order/internal/consumer/assembly_consumer.
 	// Репозиторий и inventory-клиент берём из тех же internal-пакетов,
 	// что использует прод-DI (order/internal/app/di.go)
-	svc := assemblyconsumer.NewService(
+	svc := assemblyconsumer.New(
 		wrappedConsumer,
-		orderRepoPkg.New(pool, txManager),
+		nil,
+		orderRepoPkg.New(pool),
 		inventoryClientPkg.New(invClient),
-		txManager,
 	)
 
 	go func() {
@@ -366,15 +366,34 @@ func startAssemblyService(ctx context.Context, cleanups *cleanupStack, broker st
 	syncProducer := mustNew(sarama.NewSyncProducer([]string{broker}, producerConfig()))
 	cleanups.add("assembly sync producer", func(_ context.Context) error { return syncProducer.Close() })
 
-	svc := assemblyApp.New(syncProducer, cg, assemblyApp.Config{
-		OrderPaidTopic:     orderPaidTopic,
-		ShipAssembledTopic: shipAssembledTopic,
-		MinBuildTimeSec:    0,
-		MaxBuildTimeSec:    0,
-	})
+	consumer := wrappedKafkaConsumer.NewConsumer(cg, []string{orderPaidTopic})
+	producer := wrappedKafkaProducer.NewProducer(syncProducer, shipAssembledTopic)
 
 	go func() {
-		if err := svc.RunConsumer(ctx); err != nil {
+		if err := consumer.Consume(ctx, func(msgCtx context.Context, msg kafka.Message) error {
+			var orderPaid eventsv1.OrderPaid
+			if err := proto.Unmarshal(msg.Value, &orderPaid); err != nil {
+				return err
+			}
+
+			shipAssembled := &eventsv1.ShipAssembled{
+				EventUuid:    orderPaid.GetEventUuid(),
+				OrderUuid:    orderPaid.GetOrderUuid(),
+				UserUuid:     orderPaid.GetUserUuid(),
+				BuildTimeSec: 0,
+				AssembledAt:  timestamppb.Now(),
+			}
+
+			payload, err := proto.Marshal(shipAssembled)
+			if err != nil {
+				return err
+			}
+
+			return producer.Send(msgCtx, &kafka.Message{
+				Key:   []byte(shipAssembled.GetEventUuid()),
+				Value: payload,
+			})
+		}); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "assembly service stopped: %v\n", err)
 		}
 	}()

@@ -28,12 +28,14 @@ func TestCreate_Success(t *testing.T) {
 		engineUUID = gofakeit.UUID()
 		shieldUUID = gofakeit.UUID()
 		weaponUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 		now        = time.Now()
 	)
 
 	req := input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 		ShieldUUID: &shieldUUID,
 		WeaponUUID: &weaponUUID,
 	}
@@ -111,6 +113,7 @@ func TestCreate_Success(t *testing.T) {
 
 	order := model.Order{
 		Items:      items,
+		UserUUID:   userUUID,
 		TotalPrice: int64(100000),
 		Status:     model.OrderStatusPendingPayment,
 	}
@@ -171,6 +174,7 @@ func TestCreate_PartNotFound(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 	)
 
 	repo := svcmocks.NewOrderRepository(t)
@@ -195,6 +199,7 @@ func TestCreate_PartNotFound(t *testing.T) {
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, pkgerr.NotFound(assert.AnError))
@@ -208,6 +213,7 @@ func TestCreate_PartIsOver(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 	)
 
 	repo := svcmocks.NewOrderRepository(t)
@@ -249,6 +255,7 @@ func TestCreate_PartIsOver(t *testing.T) {
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errs.ErrPartIsOver)
@@ -262,6 +269,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = gofakeit.UUID()
 		unexpectedErr = assert.AnError
 	)
 
@@ -305,6 +313,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
+			UserUUID:   userUUID,
 		}).
 		Return(unexpectedErr)
 
@@ -313,6 +322,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, unexpectedErr)
@@ -326,6 +336,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = gofakeit.UUID()
 		unexpectedErr = assert.AnError
 	)
 
@@ -369,6 +380,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
+			UserUUID:   userUUID,
 		}).
 		Return(nil)
 
@@ -381,6 +393,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, unexpectedErr)
@@ -394,6 +407,7 @@ func TestCreate_RepoError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = gofakeit.UUID()
 		unexpectedErr = assert.AnError
 	)
 
@@ -434,6 +448,7 @@ func TestCreate_RepoError(t *testing.T) {
 		Return(parts, nil)
 
 	order := model.Order{
+		UserUUID: userUUID,
 		Items: []model.OrderItem{
 			{
 				PartUuid: hullUUID,
@@ -454,6 +469,7 @@ func TestCreate_RepoError(t *testing.T) {
 		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
+			UserUUID:   userUUID,
 		}).
 		Return(nil)
 
@@ -470,6 +486,7 @@ func TestCreate_RepoError(t *testing.T) {
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, unexpectedErr)
@@ -483,6 +500,7 @@ func TestCreate_PartUUIDInvalid(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 		weaponUUID = ""
 	)
 
@@ -497,7 +515,8 @@ func TestCreate_PartUUIDInvalid(t *testing.T) {
 	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
-		WeaponUUID: &weaponUUID,
+		UserUUID:   userUUID,
+		WeaponUUID: new(weaponUUID),
 	})
 	require.Error(t, err)
 	require.ErrorIs(t, err, errs.ErrInvalidPartUUID)

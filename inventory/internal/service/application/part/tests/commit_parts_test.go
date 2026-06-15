@@ -73,7 +73,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUID, engineUUID},
 					}).Return([]entity.Part{hull, engine}, nil)
 
@@ -106,7 +106,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUID, engineUUID},
 					}).Return([]entity.Part{hull, engine}, errs.ErrPartNotFound)
 			},
@@ -134,7 +134,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUID, engineUUID},
 					}).Return([]entity.Part{hull, engine}, errs.ErrInvalidProperties)
 			},
@@ -162,7 +162,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUID, engineUUID},
 					}).Return([]entity.Part{hull, engine}, unexpectedErr)
 			},
@@ -190,7 +190,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUIDZeroStock, engineUUID},
 					}).Return([]entity.Part{hullZeroStock, engine}, nil)
 			},
@@ -218,7 +218,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUID, engineUUIDZeroReserved},
 					}).Return([]entity.Part{hull, engineZeroReserved}, nil)
 			},
@@ -246,7 +246,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUID, engineUUID},
 					}).Return([]entity.Part{hull, engine}, nil)
 
@@ -279,7 +279,7 @@ func Test_CommitParts(t *testing.T) {
 					})
 
 				repo.EXPECT().
-					ListParts(ctx, input.PartFilter{
+					ListForUpdate(ctx, input.PartFilter{
 						UUIDs: []string{hullUUID, engineUUID},
 					}).Return([]entity.Part{hull, engine}, nil)
 

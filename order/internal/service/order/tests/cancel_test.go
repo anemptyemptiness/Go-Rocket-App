@@ -32,7 +32,7 @@ func TestCancel_Success(t *testing.T) {
 	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID: orderUUID,
 			Items: []model.OrderItem{
@@ -73,7 +73,7 @@ func TestCancel_NotFound(t *testing.T) {
 	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{}, errs.ErrOrderNotFound)
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
@@ -99,7 +99,7 @@ func TestCancel_AlreadyPaid(t *testing.T) {
 	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID:   orderUUID,
 			Status: status,
@@ -128,7 +128,7 @@ func TestCancel_AlreadyCancelled(t *testing.T) {
 	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID:   orderUUID,
 			Status: status,
@@ -158,7 +158,7 @@ func TestCancel_ReleasePartsError(t *testing.T) {
 	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID: orderUUID,
 			Items: []model.OrderItem{
@@ -197,7 +197,7 @@ func TestCancel_UpdateError(t *testing.T) {
 	producer := mocks.NewOrderPaidProducerService(t)
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID: orderUUID,
 			Items: []model.OrderItem{

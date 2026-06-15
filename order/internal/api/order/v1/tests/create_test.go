@@ -36,6 +36,7 @@ func TestCreateOrder(t *testing.T) {
 		orderUUID     = gofakeit.UUID()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = gofakeit.UUID()
 		shieldUUID    = gofakeit.UUID()
 		weaponUUID    = gofakeit.UUID()
 		unexpectedErr = assert.AnError
@@ -53,6 +54,7 @@ func TestCreateOrder(t *testing.T) {
 				req: &orderv1.CreateOrderRequest{
 					HullUUID:   uuid.MustParse(hullUUID),
 					EngineUUID: uuid.MustParse(engineUUID),
+					UserUUID:   uuid.MustParse(userUUID),
 					ShieldUUID: orderv1.NewOptNilUUID(uuid.MustParse(shieldUUID)),
 					WeaponUUID: orderv1.NewOptNilUUID(uuid.MustParse(weaponUUID)),
 				},
@@ -69,6 +71,7 @@ func TestCreateOrder(t *testing.T) {
 					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
+						UserUUID:   userUUID,
 						ShieldUUID: &shieldUUID,
 						WeaponUUID: &weaponUUID,
 					}).
@@ -98,6 +101,7 @@ func TestCreateOrder(t *testing.T) {
 				req: &orderv1.CreateOrderRequest{
 					HullUUID:   uuid.Nil,
 					EngineUUID: uuid.MustParse(engineUUID),
+					UserUUID:   uuid.MustParse(userUUID),
 				},
 			},
 			expected: expected{
@@ -112,6 +116,7 @@ func TestCreateOrder(t *testing.T) {
 					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   uuid.Nil.String(),
 						EngineUUID: engineUUID,
+						UserUUID:   userUUID,
 					}).
 					Return(model.Order{}, pkgerr.InvalidArgument(ordererrs.ErrHullUUIDAndEngineUUIDAreRequired))
 			},
@@ -122,6 +127,7 @@ func TestCreateOrder(t *testing.T) {
 				req: &orderv1.CreateOrderRequest{
 					HullUUID:   uuid.MustParse(hullUUID),
 					EngineUUID: uuid.MustParse(engineUUID),
+					UserUUID:   uuid.MustParse(userUUID),
 				},
 			},
 			expected: expected{
@@ -136,6 +142,7 @@ func TestCreateOrder(t *testing.T) {
 					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
+						UserUUID:   userUUID,
 					}).
 					Return(model.Order{}, pkgerr.Conflict(ordererrs.ErrPartIsOver))
 			},
@@ -146,6 +153,7 @@ func TestCreateOrder(t *testing.T) {
 				req: &orderv1.CreateOrderRequest{
 					HullUUID:   uuid.MustParse(hullUUID),
 					EngineUUID: uuid.MustParse(engineUUID),
+					UserUUID:   uuid.MustParse(userUUID),
 				},
 			},
 			expected: expected{
@@ -160,6 +168,7 @@ func TestCreateOrder(t *testing.T) {
 					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
+						UserUUID:   userUUID,
 					}).
 					Return(model.Order{}, pkgerr.Internal(unexpectedErr))
 			},
@@ -170,6 +179,7 @@ func TestCreateOrder(t *testing.T) {
 				req: &orderv1.CreateOrderRequest{
 					HullUUID:   uuid.MustParse(hullUUID),
 					EngineUUID: uuid.MustParse(engineUUID),
+					UserUUID:   uuid.MustParse(userUUID),
 				},
 			},
 			expected: expected{
@@ -184,6 +194,7 @@ func TestCreateOrder(t *testing.T) {
 					Create(ctx, input.CreateOrderRequest{
 						HullUUID:   hullUUID,
 						EngineUUID: engineUUID,
+						UserUUID:   userUUID,
 					}).
 					Return(model.Order{}, pkgerr.NotFound(assert.AnError))
 			},

@@ -149,7 +149,7 @@ func TestDB_Order_Create_IncrementsReserved(t *testing.T) {
 		`INSERT INTO parts (uuid, name, description, part_type, price, stock_quantity, properties)
 		 VALUES
 		   ($1, 'DB-state hull', '', 'HULL', 1000, 5, '{"hull": {"strength": 100}}'),
-		   ($2, 'DB-state engine', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 50}}')`,
+		   ($2, 'DB-state engine', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 30}}')`,
 		hullUUID, engineUUID,
 	)
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestDB_Order_FailedCreate_DoesNotLeakReserved(t *testing.T) {
 	_, err := inventoryDBPool.Exec(
 		context.Background(),
 		`INSERT INTO parts (uuid, name, description, part_type, price, stock_quantity, properties)
-		 VALUES ($1, 'DB-state engine leak', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 50}}')`,
+		 VALUES ($1, 'DB-state engine leak', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 30}}')`,
 		engineUUID,
 	)
 	require.NoError(t, err)
@@ -212,7 +212,7 @@ func TestDB_Order_Cancel_DecrementsReserved(t *testing.T) {
 		`INSERT INTO parts (uuid, name, description, part_type, price, stock_quantity, properties)
 		 VALUES
 		   ($1, 'DB-state cancel hull', '', 'HULL', 1000, 5, '{"hull": {"strength": 100}}'),
-		   ($2, 'DB-state cancel engine', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 50}}')`,
+		   ($2, 'DB-state cancel engine', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 30}}')`,
 		hullUUID, engineUUID,
 	)
 	require.NoError(t, err)

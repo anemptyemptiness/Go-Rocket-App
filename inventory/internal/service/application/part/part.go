@@ -65,7 +65,7 @@ func (s *service) CommitParts(ctx context.Context, req input.CommitPartsRequest)
 	return s.txManager.Do(ctx, func(txCtx context.Context) error {
 		filter := input.PartFilter{UUIDs: req.UUIDs}
 
-		parts, err := s.inventoryRepo.ListForUpdate(ctx, filter)
+		parts, err := s.inventoryRepo.ListForUpdate(txCtx, filter)
 		if err != nil {
 			if errors.Is(err, errs.ErrPartNotFound) {
 				return pkgerr.NotFound(err)

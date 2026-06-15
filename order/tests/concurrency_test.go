@@ -36,7 +36,7 @@ func TestConcurrent_CreateOrder_LastUnit_ExactlyOneSucceeds(t *testing.T) {
 		`INSERT INTO parts (uuid, name, description, part_type, price, stock_quantity, properties)
 		 VALUES
 		   ($1, 'Concurrent last unit hull', '', 'HULL', 1000, 1, '{"hull": {"strength": 100}}'),
-		   ($2, 'Concurrent last unit engine', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 50}}')`,
+		   ($2, 'Concurrent last unit engine', '', 'ENGINE', 1000, 5, '{"engine": {"class": "C", "required_strength": 30}}')`,
 		hullUUID, engineUUID,
 	)
 	require.NoError(t, err)

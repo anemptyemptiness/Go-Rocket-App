@@ -35,6 +35,7 @@ func TestGetOrder(t *testing.T) {
 		orderUUID          = uuid.New()
 		hullUUID           = uuid.New()
 		engineUUID         = uuid.New()
+		userUUID           = uuid.New()
 		shieldUUID         = uuid.New()
 		weaponUUID         = uuid.New()
 		transactionUUID    = uuid.New()
@@ -61,6 +62,7 @@ func TestGetOrder(t *testing.T) {
 				res: &orderv1.OrderDto{
 					OrderUUID:       orderUUID,
 					HullUUID:        hullUUID,
+					UserUUID:        userUUID,
 					EngineUUID:      engineUUID,
 					ShieldUUID:      orderv1.NewOptNilUUID(shieldUUID),
 					WeaponUUID:      orderv1.NewOptNilUUID(weaponUUID),
@@ -76,7 +78,8 @@ func TestGetOrder(t *testing.T) {
 				svc.EXPECT().
 					Get(ctx, orderUUID.String()).
 					Return(model.Order{
-						UUID: orderUUID.String(),
+						UUID:     orderUUID.String(),
+						UserUUID: userUUID.String(),
 						Items: []model.OrderItem{
 							{PartUuid: hullUUID.String(), PartType: model.PartTypeHull, Price: 100000},
 							{PartUuid: engineUUID.String(), PartType: model.PartTypeEngine, Price: 200000},

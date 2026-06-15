@@ -86,7 +86,7 @@ func (s *service) ReserveParts(ctx context.Context, req input.ReservePartsReques
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
 		filter := input.PartFilter{UUIDs: req.UUIDs}
 
-		parts, err := s.inventoryRepo.ListForUpdate(ctx, filter)
+		parts, err := s.inventoryRepo.ListForUpdate(txCtx, filter)
 		if err != nil {
 			if errors.Is(err, errs.ErrPartNotFound) {
 				return pkgerr.NotFound(err)
@@ -124,7 +124,7 @@ func (s *service) ReleaseParts(ctx context.Context, req input.ReleasePartsReques
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
 		filter := input.PartFilter{UUIDs: req.UUIDs}
 
-		parts, err := s.inventoryRepo.ListForUpdate(ctx, filter)
+		parts, err := s.inventoryRepo.ListForUpdate(txCtx, filter)
 		if err != nil {
 			if errors.Is(err, errs.ErrPartNotFound) {
 				return pkgerr.NotFound(err)

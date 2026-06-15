@@ -57,7 +57,7 @@ func TestPay_Success(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(orderOld, nil)
 
 	paymentClient.EXPECT().
@@ -108,7 +108,7 @@ func TestPay_NotFound(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{}, errs.ErrOrderNotFound)
 
 	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
@@ -142,7 +142,7 @@ func TestPay_PaymentMethodUnspecified(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID:   orderUUID,
 			Status: model.OrderStatusPendingPayment,
@@ -182,7 +182,7 @@ func TestPay_AlreadyPaid(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID:   orderUUID,
 			Status: model.OrderStatusPaid,
@@ -218,7 +218,7 @@ func TestPay_Cancelled(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID:   orderUUID,
 			Status: model.OrderStatusCancelled,
@@ -255,7 +255,7 @@ func TestPay_PaymentServiceError(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID:   orderUUID,
 			Status: model.OrderStatusPendingPayment,
@@ -297,7 +297,7 @@ func TestPay_UpdateError(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(model.Order{
 			UUID:   orderUUID,
 			Status: model.OrderStatusPendingPayment,
@@ -365,7 +365,7 @@ func TestPay_ProducerError(t *testing.T) {
 		})
 
 	repo.EXPECT().
-		Get(ctx, orderUUID).
+		GetForUpdate(ctx, orderUUID).
 		Return(orderOld, nil)
 
 	paymentClient.EXPECT().
