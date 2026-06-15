@@ -62,10 +62,10 @@ func (s *service) ListParts(ctx context.Context, filter input.PartFilter) ([]ent
 }
 
 func (s *service) CommitParts(ctx context.Context, req input.CommitPartsRequest) error {
-	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		parts, err := s.inventoryRepo.ListParts(ctx, input.PartFilter{
-			UUIDs: req.UUIDs,
-		})
+	return s.txManager.Do(ctx, func(txCtx context.Context) error {
+		filter := input.PartFilter{UUIDs: req.UUIDs}
+
+		parts, err := s.inventoryRepo.ListForUpdate(ctx, filter)
 		if err != nil {
 			if errors.Is(err, errs.ErrPartNotFound) {
 				return pkgerr.NotFound(err)
@@ -74,6 +74,9 @@ func (s *service) CommitParts(ctx context.Context, req input.CommitPartsRequest)
 				return pkgerr.Internal(err)
 			}
 			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+		if len(filter.UUIDs) > 0 && len(filter.UUIDs) != len(parts) {
+			return pkgerr.NotFound(errs.ErrPartNotFound)
 		}
 
 		for _, part := range parts {
@@ -92,9 +95,4 @@ func (s *service) CommitParts(ctx context.Context, req input.CommitPartsRequest)
 
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

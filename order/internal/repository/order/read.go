@@ -91,3 +91,56 @@ func (r *repository) getOrderItems(ctx context.Context, orderUUID string) ([]rec
 
 	return items, nil
 }
+
+func (r *repository) GetForUpdate(ctx context.Context, orderUUID string) (model.Order, error) {
+	order, err := r.getForUpdate(ctx, orderUUID)
+	if err != nil {
+		return model.Order{}, err
+	}
+
+	orderItems, err := r.getOrderItems(ctx, orderUUID)
+	if err != nil {
+		return model.Order{}, err
+	}
+
+	order.OrderItems = orderItems
+
+	return repoConverter.OrderRecordToModel(order), nil
+}
+
+func (r *repository) getForUpdate(ctx context.Context, orderUUID string) (record.Order, error) {
+	const queryOrder = `
+		SELECT
+			o.uuid,
+			o.user_uuid,
+			o.total_price,
+			o."status",
+			o.transaction_uuid,
+			o.payment_method,
+			o.created_at,
+			o.updated_at
+		FROM public.orders AS o
+		WHERE o.uuid = $1
+		ORDER BY o.uuid FOR UPDATE;`
+
+	var order record.Order
+
+	err := r.getter.DefaultTrOrDB(ctx, r.pool).QueryRow(ctx, queryOrder, orderUUID).Scan(
+		&order.Uuid,
+		&order.UserUuid,
+		&order.TotalPrice,
+		&order.Status,
+		&order.TransactionUUID,
+		&order.PaymentMethod,
+		&order.CreatedAt,
+		&order.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return record.Order{}, fmt.Errorf("%w: uuid=%s", errs.ErrOrderNotFound, orderUUID)
+		}
+		return record.Order{}, err
+	}
+
+	return order, nil
+}

@@ -7,7 +7,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/config"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/logger"
 )
 
 const (
@@ -62,6 +64,7 @@ func (a *App) Run() error {
 func (a *App) initDeps(ctx context.Context) {
 	inits := []func(context.Context){
 		a.initDI,
+		a.initLogger,
 	}
 
 	for _, f := range inits {
@@ -71,6 +74,10 @@ func (a *App) initDeps(ctx context.Context) {
 
 func (a *App) initDI(_ context.Context) {
 	a.diContainer = &diContainer{}
+}
+
+func (a *App) initLogger(_ context.Context) {
+	logger.Init(config.AppConfig().Logger.Level)
 }
 
 func (a *App) runConsumer(ctx context.Context) error {

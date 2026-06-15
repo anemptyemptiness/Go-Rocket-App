@@ -17,6 +17,6 @@ var (
 	ErrOrderStatusIncorrect             = errors.New("некорректный статус заказа")
 	ErrOrderAlreadyPaid                 = errors.New("заказ уже оплачен")
 	ErrOrderAlreadyCancelled            = errors.New("заказ уже отменён")
-	ErrOrderAssembled                   = errors.New("заказ уже в сборке")
+	ErrOrderAssembled                   = errors.New("заказ уже собран")
 	ErrInvalidPartUUID                  = errors.New("идентификатор детали невалидный")
 )

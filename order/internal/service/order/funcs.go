@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
+
+	"github.com/google/uuid"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
@@ -112,7 +115,7 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 	var transactionUUID string
 
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		order, err := s.orderRepository.Get(ctx, orderUUID)
+		order, err := s.orderRepository.GetForUpdate(ctx, orderUUID)
 		if err != nil {
 			if errors.Is(err, errs.ErrOrderNotFound) {
 				return pkgerr.NotFound(err)
@@ -153,14 +156,18 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 			return pkgerr.Internal(fmt.Errorf("обновить заказ: %w", err))
 		}
 
-		// err = s.orderPaidProducer.Produce(ctx, model.NewOrderPaidEvent(
-		//	uuid.New().String(),
-		//	orderUUID,
-		//	"",
-		// ))
-		// if err != nil {
-		//	return pkgerr.Internal(fmt.Errorf("отправка ивента OrderPaid в брокер сообщений: %w", err))
-		// }
+		eventUUID := uuid.New().String()
+
+		err = s.orderPaidProducer.Produce(ctx, model.NewOrderPaidEvent(
+			eventUUID,
+			order.UUID,
+			order.UserUUID,
+		))
+		if err != nil {
+			return pkgerr.Internal(fmt.Errorf("отправка ивента %s OrderPaid в брокер сообщений: %w", eventUUID, err))
+		}
+
+		slog.InfoContext(ctx, "ивент OrderPaid успешно отправлен", "event_uuid", eventUUID)
 
 		return nil
 	})
@@ -172,7 +179,7 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 }
 
 func (s *service) Cancel(ctx context.Context, orderUUID string) error {
-	order, err := s.orderRepository.Get(ctx, orderUUID)
+	order, err := s.orderRepository.GetForUpdate(ctx, orderUUID)
 	if err != nil {
 		if errors.Is(err, errs.ErrOrderNotFound) {
 			return pkgerr.NotFound(err)

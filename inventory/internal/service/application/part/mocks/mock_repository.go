@@ -165,6 +165,74 @@ func (_c *Repository_GetPart_Call) RunAndReturn(run func(ctx context.Context, uu
 	return _c
 }
 
+// ListForUpdate provides a mock function for the type Repository
+func (_mock *Repository) ListForUpdate(ctx context.Context, filter input.PartFilter) ([]entity.Part, error) {
+	ret := _mock.Called(ctx, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListForUpdate")
+	}
+
+	var r0 []entity.Part
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.PartFilter) ([]entity.Part, error)); ok {
+		return returnFunc(ctx, filter)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, input.PartFilter) []entity.Part); ok {
+		r0 = returnFunc(ctx, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]entity.Part)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, input.PartFilter) error); ok {
+		r1 = returnFunc(ctx, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// Repository_ListForUpdate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListForUpdate'
+type Repository_ListForUpdate_Call struct {
+	*mock.Call
+}
+
+// ListForUpdate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filter input.PartFilter
+func (_e *Repository_Expecter) ListForUpdate(ctx interface{}, filter interface{}) *Repository_ListForUpdate_Call {
+	return &Repository_ListForUpdate_Call{Call: _e.mock.On("ListForUpdate", ctx, filter)}
+}
+
+func (_c *Repository_ListForUpdate_Call) Run(run func(ctx context.Context, filter input.PartFilter)) *Repository_ListForUpdate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 input.PartFilter
+		if args[1] != nil {
+			arg1 = args[1].(input.PartFilter)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Repository_ListForUpdate_Call) Return(parts []entity.Part, err error) *Repository_ListForUpdate_Call {
+	_c.Call.Return(parts, err)
+	return _c
+}
+
+func (_c *Repository_ListForUpdate_Call) RunAndReturn(run func(ctx context.Context, filter input.PartFilter) ([]entity.Part, error)) *Repository_ListForUpdate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListParts provides a mock function for the type Repository
 func (_mock *Repository) ListParts(ctx context.Context, filter input.PartFilter) ([]entity.Part, error) {
 	ret := _mock.Called(ctx, filter)
