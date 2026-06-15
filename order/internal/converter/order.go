@@ -5,6 +5,7 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
 )
@@ -38,6 +39,7 @@ func OrderModelToDTO(order model.Order) *orderv1.OrderDto {
 
 	return &orderv1.OrderDto{
 		OrderUUID:       uuid.MustParse(order.UUID),
+		UserUUID:        uuid.MustParse(order.UserUUID),
 		HullUUID:        hullUuid,
 		EngineUUID:      engineUuid,
 		ShieldUUID:      shieldUuid,
@@ -50,47 +52,46 @@ func OrderModelToDTO(order model.Order) *orderv1.OrderDto {
 	}
 }
 
-func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (model.CreateOrderRequest, error) {
+func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (input.CreateOrderRequest, error) {
 	if req == nil {
-		return model.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrEmptyRequest)
+		return input.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrEmptyRequest)
 	}
 
 	var shieldUUID *string
 	if v := req.GetShieldUUID(); v.IsSet() && !v.IsNull() {
 		id, ok := v.Get()
 		if !ok {
-			return model.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrShieldUUIDIncorrect)
+			return input.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrShieldUUIDIncorrect)
 		}
 
-		idStr := id.String()
-		shieldUUID = &idStr
+		shieldUUID = new(id.String())
 	}
 
 	var weaponUUID *string
 	if v := req.GetWeaponUUID(); v.IsSet() && !v.IsNull() {
 		id, ok := v.Get()
 		if !ok {
-			return model.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrWeaponUUIDIncorrect)
+			return input.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrWeaponUUIDIncorrect)
 		}
 
-		idStr := id.String()
-		weaponUUID = &idStr
+		weaponUUID = new(id.String())
 	}
 
-	return model.CreateOrderRequest{
+	return input.CreateOrderRequest{
 		HullUUID:   req.GetHullUUID().String(),
 		EngineUUID: req.GetEngineUUID().String(),
+		UserUUID:   req.GetUserUUID().String(),
 		ShieldUUID: shieldUUID,
 		WeaponUUID: weaponUUID,
 	}, nil
 }
 
-func PayOrderRequestToModel(req *orderv1.PayOrderRequest, params orderv1.PayOrderParams) (model.PayOrderRequest, error) {
+func PayOrderRequestToModel(req *orderv1.PayOrderRequest, params orderv1.PayOrderParams) (input.PayOrderRequest, error) {
 	if req == nil {
-		return model.PayOrderRequest{}, pkgerr.InvalidArgument(errs.ErrEmptyRequest)
+		return input.PayOrderRequest{}, pkgerr.InvalidArgument(errs.ErrEmptyRequest)
 	}
 
-	return model.PayOrderRequest{
+	return input.PayOrderRequest{
 		PaymentMethod: model.PaymentMethod(req.GetPaymentMethod()),
 		OrderUUID:     params.OrderUUID.String(),
 	}, nil

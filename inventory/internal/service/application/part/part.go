@@ -60,3 +60,39 @@ func (s *service) ListParts(ctx context.Context, filter input.PartFilter) ([]ent
 
 	return parts, nil
 }
+
+func (s *service) CommitParts(ctx context.Context, req input.CommitPartsRequest) error {
+	return s.txManager.Do(ctx, func(txCtx context.Context) error {
+		filter := input.PartFilter{UUIDs: req.UUIDs}
+
+		parts, err := s.inventoryRepo.ListForUpdate(txCtx, filter)
+		if err != nil {
+			if errors.Is(err, errs.ErrPartNotFound) {
+				return pkgerr.NotFound(err)
+			}
+			if errors.Is(err, errs.ErrInvalidProperties) {
+				return pkgerr.Internal(err)
+			}
+			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+		if len(filter.UUIDs) > 0 && len(filter.UUIDs) != len(parts) {
+			return pkgerr.NotFound(errs.ErrPartNotFound)
+		}
+
+		for _, part := range parts {
+			if part.GetStockQuantity() == 0 || part.GetReserved() == 0 {
+				return pkgerr.FailedPrecondition(errs.ErrStockQuantityOrReservedIsEmpty)
+			}
+		}
+
+		err = s.inventoryRepo.CommitParts(txCtx, req)
+		if err != nil {
+			if errors.Is(err, errs.ErrPartNotFound) {
+				return pkgerr.NotFound(err)
+			}
+			return pkgerr.Internal(fmt.Errorf("списать детали: %w", err))
+		}
+
+		return nil
+	})
+}

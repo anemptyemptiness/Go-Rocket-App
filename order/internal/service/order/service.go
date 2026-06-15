@@ -1,10 +1,11 @@
 package order
 
 type service struct {
-	orderRepository OrderRepository
-	paymentClient   PaymentClient
-	inventoryClient InventoryClient
-	txManager       TxManager
+	orderRepository   OrderRepository
+	paymentClient     PaymentClient
+	inventoryClient   InventoryClient
+	txManager         TxManager
+	orderPaidProducer OrderPaidProducerService
 }
 
 func New(
@@ -12,11 +13,13 @@ func New(
 	paymentClient PaymentClient,
 	inventoryClient InventoryClient,
 	txManager TxManager,
+	orderPaidProducer OrderPaidProducerService,
 ) *service {
 	return &service{
-		orderRepository: orderRepository,
-		paymentClient:   paymentClient,
-		inventoryClient: inventoryClient,
-		txManager:       txManager,
+		orderRepository:   orderRepository,
+		paymentClient:     paymentClient,
+		inventoryClient:   inventoryClient,
+		txManager:         txManager,
+		orderPaidProducer: orderPaidProducer,
 	}
 }

@@ -2,6 +2,8 @@ package part
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
@@ -79,11 +81,23 @@ func (s *service) resolveShipSlots(_ context.Context, parts []entity.Part, req i
 	return nil
 }
 
+//nolint:dupl // Логика методов схожа, поэтому ошибочно это воспринимается за дублирование.
 func (s *service) ReserveParts(ctx context.Context, req input.ReservePartsRequest) error {
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		parts, err := s.ListParts(txCtx, input.PartFilter{UUIDs: req.UUIDs})
+		filter := input.PartFilter{UUIDs: req.UUIDs}
+
+		parts, err := s.inventoryRepo.ListForUpdate(txCtx, filter)
 		if err != nil {
-			return err
+			if errors.Is(err, errs.ErrPartNotFound) {
+				return pkgerr.NotFound(err)
+			}
+			if errors.Is(err, errs.ErrInvalidProperties) {
+				return pkgerr.Internal(err)
+			}
+			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+		if len(filter.UUIDs) > 0 && len(filter.UUIDs) != len(parts) {
+			return pkgerr.NotFound(errs.ErrPartNotFound)
 		}
 
 		for idx := range parts {
@@ -105,11 +119,23 @@ func (s *service) ReserveParts(ctx context.Context, req input.ReservePartsReques
 	return nil
 }
 
+//nolint:dupl // Логика методов схожа, поэтому ошибочно это воспринимается за дублирование.
 func (s *service) ReleaseParts(ctx context.Context, req input.ReleasePartsRequest) error {
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		parts, err := s.ListParts(txCtx, input.PartFilter{UUIDs: req.UUIDs})
+		filter := input.PartFilter{UUIDs: req.UUIDs}
+
+		parts, err := s.inventoryRepo.ListForUpdate(txCtx, filter)
 		if err != nil {
-			return err
+			if errors.Is(err, errs.ErrPartNotFound) {
+				return pkgerr.NotFound(err)
+			}
+			if errors.Is(err, errs.ErrInvalidProperties) {
+				return pkgerr.Internal(err)
+			}
+			return pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
+		}
+		if len(filter.UUIDs) > 0 && len(filter.UUIDs) != len(parts) {
+			return pkgerr.NotFound(errs.ErrPartNotFound)
 		}
 
 		for idx := range parts {

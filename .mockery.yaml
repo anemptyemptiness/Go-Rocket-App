@@ -33,7 +33,13 @@ packages:
       include-interface-regex: ".*Service"
   github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order:
     config:
-      include-interface-regex: ".*(Repository|Client|TxManager)"
+      include-interface-regex: ".*(Repository|Client|TxManager|Service)"
+  github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/ship_assembled:
+    config:
+      include-interface-regex: ".*Consumer"
+  github.com/anemptyemptiness/Go-Rocket-App/order/internal/producer/order_paid:
+    config:
+      include-interface-regex: ".*Producer"
 
   # Inventory service
   github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1:
@@ -47,3 +53,14 @@ packages:
   github.com/anemptyemptiness/Go-Rocket-App/payment/internal/api/payment/v1:
     config:
       include-interface-regex: ".*Service"
+
+  # Assembly service
+  github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/consumer/order_paid:
+    config:
+      include-interface-regex: ".*(Consumer|Service)"
+  github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/producer/ship_assembled:
+    config:
+      include-interface-regex: ".*Producer"
+  github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/service/assembly:
+    config:
+      include-interface-regex: ".*(Service|Sleeper)"

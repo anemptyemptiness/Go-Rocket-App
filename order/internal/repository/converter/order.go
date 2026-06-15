@@ -8,8 +8,7 @@ import (
 func OrderRecordToModel(order record.Order) model.Order {
 	var paymentMethod *model.PaymentMethod
 	if order.PaymentMethod != nil {
-		value := model.PaymentMethod(*order.PaymentMethod)
-		paymentMethod = &value
+		paymentMethod = new(model.PaymentMethod(*order.PaymentMethod))
 	}
 
 	orderItems := make([]model.OrderItem, 0, len(order.OrderItems))
@@ -26,6 +25,7 @@ func OrderRecordToModel(order record.Order) model.Order {
 
 	return model.Order{
 		UUID:            order.Uuid,
+		UserUUID:        order.UserUuid,
 		Items:           orderItems,
 		TotalPrice:      order.TotalPrice,
 		TransactionUUID: order.TransactionUUID,

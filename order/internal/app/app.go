@@ -32,6 +32,7 @@ const (
 type App struct {
 	diContainer *diContainer
 	httpServer  *http.Server
+	consumer    ShipAssembledConsumer
 }
 
 func New(ctx context.Context) *App {
@@ -46,9 +47,13 @@ func (a *App) Run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
 	go func() {
 		errChan <- a.runHTTPServer()
+	}()
+
+	go func() {
+		errChan <- a.runConsumer(ctx)
 	}()
 
 	select {
@@ -59,6 +64,15 @@ func (a *App) Run() error {
 		a.startGracefulShutdown()
 	}
 
+	return nil
+}
+
+func (a *App) runConsumer(ctx context.Context) error {
+	slog.Info("🚀 Kafka-консюмер запущен", "address", config.AppConfig().Kafka.Brokers)
+
+	if consumerErr := a.consumer.RunConsumer(ctx); consumerErr != nil {
+		return consumerErr
+	}
 	return nil
 }
 
@@ -87,6 +101,7 @@ func (a *App) initDeps(ctx context.Context) {
 		a.initDI,
 		a.initLogger,
 		a.initHTTPServer,
+		a.initShipAssembledConsumer,
 	}
 
 	for _, f := range deps {
@@ -122,4 +137,8 @@ func (a *App) initHTTPServer(ctx context.Context) {
 		}
 		return nil
 	})
+}
+
+func (a *App) initShipAssembledConsumer(ctx context.Context) {
+	a.consumer = a.diContainer.ShipAssembledConsumer(ctx)
 }

@@ -6,6 +6,7 @@ bin
 inventory.env
 order.env
 payment.env
+core.env
 
 ./inventory/config.local.yaml
 ./inventory/config.production.yaml

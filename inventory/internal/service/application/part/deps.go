@@ -10,7 +10,9 @@ import (
 type Repository interface {
 	GetPart(ctx context.Context, uuid string) (entity.Part, error)
 	ListParts(ctx context.Context, filter input.PartFilter) ([]entity.Part, error)
+	ListForUpdate(ctx context.Context, filter input.PartFilter) ([]entity.Part, error)
 	UpdateReservedBatch(ctx context.Context, parts []entity.Part) error
+	CommitParts(ctx context.Context, req input.CommitPartsRequest) error
 }
 
 type TxManager interface {

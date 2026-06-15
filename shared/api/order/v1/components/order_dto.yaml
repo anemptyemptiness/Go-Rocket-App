@@ -7,6 +7,7 @@ required:
   - total_price
   - status
   - created_at
+  - user_uuid
 properties:
   order_uuid:
     type: string
@@ -53,6 +54,11 @@ properties:
       - $ref: './enums/payment_method.yaml'
   status:
     $ref: './enums/order_status.yaml'
+  user_uuid:
+    type: string
+    format: uuid
+    description: UUID пользователя (v4)
+    example: "550e8400-e29b-41d4-a716-446655440007"
   created_at:
     type: string
     format: date-time

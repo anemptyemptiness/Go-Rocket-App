@@ -12,6 +12,7 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	svcmocks "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
@@ -27,12 +28,14 @@ func TestCreate_Success(t *testing.T) {
 		engineUUID = gofakeit.UUID()
 		shieldUUID = gofakeit.UUID()
 		weaponUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 		now        = time.Now()
 	)
 
-	req := model.CreateOrderRequest{
+	req := input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 		ShieldUUID: &shieldUUID,
 		WeaponUUID: &weaponUUID,
 	}
@@ -41,6 +44,7 @@ func TestCreate_Success(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txmanager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txmanager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -109,6 +113,7 @@ func TestCreate_Success(t *testing.T) {
 
 	order := model.Order{
 		Items:      items,
+		UserUUID:   userUUID,
 		TotalPrice: int64(100000),
 		Status:     model.OrderStatusPendingPayment,
 	}
@@ -117,7 +122,7 @@ func TestCreate_Success(t *testing.T) {
 		Create(ctx, order).
 		Return(orderUUID, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txmanager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txmanager, producer)
 
 	order, err := svc.Create(ctx, req)
 	require.NoError(t, err)
@@ -149,10 +154,11 @@ func TestCreate_HullAndEngineRequired(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUIDEmpty,
 		EngineUUID: engineUUIDEmpty,
 	})
@@ -168,12 +174,14 @@ func TestCreate_PartNotFound(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 	)
 
 	repo := svcmocks.NewOrderRepository(t)
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -186,11 +194,12 @@ func TestCreate_PartNotFound(t *testing.T) {
 		ListParts(mock.Anything, []string{hullUUID, engineUUID}).
 		Return(nil, pkgerr.NotFound(assert.AnError))
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, pkgerr.NotFound(assert.AnError))
@@ -204,12 +213,14 @@ func TestCreate_PartIsOver(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 	)
 
 	repo := svcmocks.NewOrderRepository(t)
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -239,11 +250,12 @@ func TestCreate_PartIsOver(t *testing.T) {
 			},
 		}, nil)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errs.ErrPartIsOver)
@@ -257,6 +269,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = gofakeit.UUID()
 		unexpectedErr = assert.AnError
 	)
 
@@ -283,6 +296,7 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -296,17 +310,19 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		Return(parts, nil)
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
+			UserUUID:   userUUID,
 		}).
 		Return(unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, unexpectedErr)
@@ -320,6 +336,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = gofakeit.UUID()
 		unexpectedErr = assert.AnError
 	)
 
@@ -346,6 +363,7 @@ func TestCreate_ReservePartsError(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -359,9 +377,10 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		Return(parts, nil)
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
+			UserUUID:   userUUID,
 		}).
 		Return(nil)
 
@@ -369,11 +388,12 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		ReserveParts(mock.Anything, []string{hullUUID, engineUUID}).
 		Return(unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, unexpectedErr)
@@ -387,6 +407,7 @@ func TestCreate_RepoError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = gofakeit.UUID()
 		unexpectedErr = assert.AnError
 	)
 
@@ -413,6 +434,7 @@ func TestCreate_RepoError(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
 	txManager.EXPECT().
 		Do(ctx, mock.Anything).
@@ -426,6 +448,7 @@ func TestCreate_RepoError(t *testing.T) {
 		Return(parts, nil)
 
 	order := model.Order{
+		UserUUID: userUUID,
 		Items: []model.OrderItem{
 			{
 				PartUuid: hullUUID,
@@ -443,9 +466,10 @@ func TestCreate_RepoError(t *testing.T) {
 	}
 
 	inventoryClient.EXPECT().
-		ValidateCompatibility(mock.Anything, model.CreateOrderRequest{
+		ValidateCompatibility(mock.Anything, input.CreateOrderRequest{
 			HullUUID:   hullUUID,
 			EngineUUID: engineUUID,
+			UserUUID:   userUUID,
 		}).
 		Return(nil)
 
@@ -457,11 +481,12 @@ func TestCreate_RepoError(t *testing.T) {
 		Create(ctx, order).
 		Return("", unexpectedErr)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
+		UserUUID:   userUUID,
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, unexpectedErr)
@@ -475,6 +500,7 @@ func TestCreate_PartUUIDInvalid(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = gofakeit.UUID()
 		weaponUUID = ""
 	)
 
@@ -482,13 +508,15 @@ func TestCreate_PartUUIDInvalid(t *testing.T) {
 	paymentClient := svcmocks.NewPaymentClient(t)
 	inventoryClient := svcmocks.NewInventoryClient(t)
 	txManager := svcmocks.NewTxManager(t)
+	producer := svcmocks.NewOrderPaidProducerService(t)
 
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager)
+	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
 
-	order, err := svc.Create(ctx, model.CreateOrderRequest{
+	order, err := svc.Create(ctx, input.CreateOrderRequest{
 		HullUUID:   hullUUID,
 		EngineUUID: engineUUID,
-		WeaponUUID: &weaponUUID,
+		UserUUID:   userUUID,
+		WeaponUUID: new(weaponUUID),
 	})
 	require.Error(t, err)
 	require.ErrorIs(t, err, errs.ErrInvalidPartUUID)

@@ -5,6 +5,7 @@ import (
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -60,7 +61,7 @@ func ListPartsClientResponseProtoToModel(resp *inventoryv1.ListPartsResponse) ([
 	return modelParts, nil
 }
 
-func ModelPartsToValidateCompatibilityRequest(uuids model.CreateOrderRequest) *inventoryv1.ValidateCompatibilityRequest {
+func ModelPartsToValidateCompatibilityRequest(uuids input.CreateOrderRequest) *inventoryv1.ValidateCompatibilityRequest {
 	pReq := &inventoryv1.ValidateCompatibilityRequest{
 		HullUuid:   uuids.HullUUID,
 		EngineUuid: uuids.EngineUUID,

@@ -21,3 +21,14 @@ pg:
   user: "order-service-user"
   password: "order-service-password"
   sslmode: "disable"
+
+kafka:
+  brokers:
+    - "localhost:9092"
+
+ship_assembled_consumer:
+  topic: "assembly.ship-assembled"
+  group_id: "2"
+
+order_paid_producer:
+  topic: "order.paid"

@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
+
+	"github.com/google/uuid"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
@@ -23,9 +27,12 @@ func (s *service) Get(ctx context.Context, orderUUID string) (model.Order, error
 	return order, nil
 }
 
-func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (model.Order, error) {
+func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (model.Order, error) {
 	if req.HullUUID == "" || req.EngineUUID == "" {
 		return model.Order{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
+	}
+	if req.UserUUID == "" {
+		return model.Order{}, pkgerr.InvalidArgument(errs.ErrUserUUIDIsRequired)
 	}
 
 	seen := make(map[string]struct{})
@@ -67,6 +74,7 @@ func (s *service) Create(ctx context.Context, req model.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
+		order.UserUUID = req.UserUUID
 		order.Items = orderItems
 		order.TotalPrice = totalPrice
 		order.Status = model.OrderStatusPendingPayment
@@ -107,7 +115,7 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 	var transactionUUID string
 
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		order, err := s.orderRepository.Get(ctx, orderUUID)
+		order, err := s.orderRepository.GetForUpdate(ctx, orderUUID)
 		if err != nil {
 			if errors.Is(err, errs.ErrOrderNotFound) {
 				return pkgerr.NotFound(err)
@@ -120,6 +128,8 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 			return pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
 		case model.OrderStatusCancelled:
 			return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
+		case model.OrderStatusAssembled:
+			return pkgerr.Conflict(errs.ErrOrderAssembled)
 		}
 
 		if order.Status != model.OrderStatusPendingPayment {
@@ -146,6 +156,19 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 			return pkgerr.Internal(fmt.Errorf("обновить заказ: %w", err))
 		}
 
+		eventUUID := uuid.New().String()
+
+		err = s.orderPaidProducer.Produce(ctx, model.NewOrderPaidEvent(
+			eventUUID,
+			order.UUID,
+			order.UserUUID,
+		))
+		if err != nil {
+			return pkgerr.Internal(fmt.Errorf("отправка ивента %s OrderPaid в брокер сообщений: %w", eventUUID, err))
+		}
+
+		slog.InfoContext(ctx, "ивент OrderPaid успешно отправлен", "event_uuid", eventUUID)
+
 		return nil
 	})
 	if err != nil {
@@ -156,7 +179,7 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 }
 
 func (s *service) Cancel(ctx context.Context, orderUUID string) error {
-	order, err := s.orderRepository.Get(ctx, orderUUID)
+	order, err := s.orderRepository.GetForUpdate(ctx, orderUUID)
 	if err != nil {
 		if errors.Is(err, errs.ErrOrderNotFound) {
 			return pkgerr.NotFound(err)
@@ -169,6 +192,8 @@ func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 		return pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
 	case model.OrderStatusCancelled:
 		return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
+	case model.OrderStatusAssembled:
+		return pkgerr.Conflict(errs.ErrOrderAssembled)
 	}
 
 	uuids := make([]string, 0, len(order.Items))

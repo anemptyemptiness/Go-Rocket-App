@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// .env опционален — ошибка загрузки допустима.
-	_ = godotenv.Load("inventory.env") //nolint:gosec // G104: ошибка загрузки допустима.
+	_ = godotenv.Load("../order.env") //nolint:gosec // G104: ошибка загрузки допустима.
 
 	configPath := config.ResolveConfigPath()
 

@@ -1,4 +1,4 @@
-name: CI
+name: "CI"
 
 on:
   push:
@@ -7,27 +7,29 @@ on:
     branches: [main]
 
 jobs:
+  build:
+    name: "Build"
+    uses: ./.github/workflows/build.yml
+
   lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    name: "Lint"
+    needs: build
+    uses: ./.github/workflows/lint.yml
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.work
-          cache: true
+  test-api:
+    name: "Test API"
+    needs: build
+    uses: ./.github/workflows/test-api.yml
 
-      - name: Install Task
-        uses: arduino/setup-task@v2
-        with:
-          version: 3.x
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+  test-unit:
+    name: "Test Unit"
+    needs: build
+    uses: ./.github/workflows/test-unit.yml
 
-      - name: Run lint
-        run: task lint
+  test-e2e:
+    name: "Test E2E"
+    needs: build
+    uses: ./.github/workflows/test-e2e.yml
 
   test:
     name: Test
@@ -64,7 +66,7 @@ jobs:
           GIST_ID: ${{ secrets.GIST_ID }}
         run: |
           COVERAGE=$(go tool cover -func=coverage/coverage.out | tail -n1 | awk '{print $NF}')
-          
+
           cat > coverage.json <<EOF
           {
             "schemaVersion": 1,
@@ -73,7 +75,7 @@ jobs:
             "color": "green"
           }
           EOF
-          
+
           curl -X PATCH \
             -H "Authorization: token $GIST_TOKEN" \
             -H "Accept: application/vnd.github+json" \

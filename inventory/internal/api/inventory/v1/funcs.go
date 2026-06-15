@@ -80,3 +80,17 @@ func (a *api) ReleaseParts(ctx context.Context, req *inventoryv1.ReleasePartsReq
 
 	return &inventoryv1.ReleasePartsResponse{}, nil
 }
+
+func (a *api) CommitParts(ctx context.Context, req *inventoryv1.CommitPartsRequest) (*inventoryv1.CommitPartsResponse, error) {
+	modelReq, err := converter.CommitPartsRequestToModel(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = a.inventoryService.CommitParts(ctx, modelReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &inventoryv1.CommitPartsResponse{}, nil
+}

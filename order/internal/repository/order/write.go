@@ -30,8 +30,8 @@ func (r *repository) createOrder(ctx context.Context, order model.Order) (string
 	orderUUID := uuid.New()
 
 	builder := sqlbuilder.NewInsertBuilder()
-	builder.InsertInto("orders").Cols("uuid", "total_price", "status", "payment_method")
-	builder.Values(orderUUID, order.TotalPrice, order.Status, order.PaymentMethod)
+	builder.InsertInto("orders").Cols("uuid", "user_uuid", "total_price", "status", "payment_method")
+	builder.Values(orderUUID, order.UserUUID, order.TotalPrice, order.Status, order.PaymentMethod)
 
 	query, args := builder.BuildWithFlavor(sqlbuilder.PostgreSQL)
 
