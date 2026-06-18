@@ -8,13 +8,19 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
+	iam "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/client/grpc/iam/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/config"
+	iamsvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
 	inventoryrepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
 	applicationsvcpart "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/application/part"
 	domainsvcchecker "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/domain/compatibility_checker"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
+	authv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/auth/v1"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -25,6 +31,7 @@ type diContainer struct {
 	compatibilityChecker applicationsvcpart.CompatibilityChecker
 	inventoryRepo        applicationsvcpart.Repository
 	txManager            applicationsvcpart.TxManager
+	iamClient            iamsvc.IAMService
 }
 
 func (d *diContainer) PGPool(ctx context.Context) *pgxpool.Pool {
@@ -100,4 +107,38 @@ func (d *diContainer) TxManager(ctx context.Context) applicationsvcpart.TxManage
 	}
 
 	return d.txManager
+}
+
+func (d *diContainer) IAMClient(_ context.Context) iamsvc.IAMService {
+	if d.iamClient == nil {
+		iamConn, err := grpc.NewClient(config.AppConfig().IAMClient.Address(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:                keepAliveTime,
+				Timeout:             keepAliveTimeout,
+				PermitWithoutStream: keepAlivePermitWithoutStream,
+			}),
+		)
+		if err != nil {
+			slog.Error("не удалось подключиться к IAMClient", "error", err)
+			os.Exit(1)
+		}
+
+		closer.Add("IAM GRPC Client", func(_ context.Context) error {
+			err = iamConn.Close()
+			if err != nil {
+				slog.Error("не удалось закрыть gRPC соединение inventory client", "error", err)
+			} else {
+				slog.Info("соединение с IAMClient закрыто")
+			}
+			return nil
+		})
+
+		iamClientGRPC := authv1.NewAuthServiceClient(iamConn)
+		d.iamClient = iam.New(iamClientGRPC)
+
+		slog.Info("подключение к IAMClient установлено")
+	}
+
+	return d.iamClient
 }
