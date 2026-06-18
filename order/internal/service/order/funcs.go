@@ -31,9 +31,6 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 	if req.HullUUID == "" || req.EngineUUID == "" {
 		return model.Order{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
 	}
-	if req.UserUUID == "" {
-		return model.Order{}, pkgerr.InvalidArgument(errs.ErrUserUUIDIsRequired)
-	}
 
 	seen := make(map[string]struct{})
 	for _, id := range req.PartUUIDs() {
@@ -74,7 +71,6 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
-		order.UserUUID = req.UserUUID
 		order.Items = orderItems
 		order.TotalPrice = totalPrice
 		order.Status = model.OrderStatusPendingPayment

@@ -80,7 +80,6 @@ func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (input.CreateOrd
 	return input.CreateOrderRequest{
 		HullUUID:   req.GetHullUUID().String(),
 		EngineUUID: req.GetEngineUUID().String(),
-		UserUUID:   req.GetUserUUID().String(),
 		ShieldUUID: shieldUUID,
 		WeaponUUID: weaponUUID,
 	}, nil

@@ -116,7 +116,7 @@ func buildResponse(err error, cfg *httpErrorConfig) any {
 		if cfg.forbidden != nil {
 			return cfg.forbidden(code, msg)
 		}
-	case CodeUnauthorized:
+	case CodeUnauthenticated:
 		if cfg.unauthorized != nil {
 			return cfg.unauthorized(code, msg)
 		}

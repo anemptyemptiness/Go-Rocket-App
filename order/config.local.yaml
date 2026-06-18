@@ -11,6 +11,10 @@ grpc:
     host: "localhost"
     port: "50051"
 
+  iam_client:
+    host: "localhost"
+    port: "50053"
+
 logger:
   level: "debug"
 

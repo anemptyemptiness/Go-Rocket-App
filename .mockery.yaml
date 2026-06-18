@@ -64,3 +64,11 @@ packages:
   github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/service/assembly:
     config:
       include-interface-regex: ".*(Service|Sleeper)"
+
+  # IAM service
+  github.com/anemptyemptiness/Go-Rocket-App/iam/internal/service/auth:
+    config:
+      include-interface-regex: ".*Repository"
+  github.com/anemptyemptiness/Go-Rocket-App/iam/internal/service/user:
+    config:
+      include-interface-regex: ".*Repository"

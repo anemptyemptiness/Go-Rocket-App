@@ -58,8 +58,6 @@ type CreateOrderRequest struct {
 	ShieldUUID OptNilUUID `json:"shield_uuid"`
 	// UUID вооружения (опциональный, v4).
 	WeaponUUID OptNilUUID `json:"weapon_uuid"`
-	// UUID пользователя (обязательный, v4).
-	UserUUID uuid.UUID `json:"user_uuid"`
 }
 
 // GetHullUUID returns the value of HullUUID.
@@ -82,11 +80,6 @@ func (s *CreateOrderRequest) GetWeaponUUID() OptNilUUID {
 	return s.WeaponUUID
 }
 
-// GetUserUUID returns the value of UserUUID.
-func (s *CreateOrderRequest) GetUserUUID() uuid.UUID {
-	return s.UserUUID
-}
-
 // SetHullUUID sets the value of HullUUID.
 func (s *CreateOrderRequest) SetHullUUID(val uuid.UUID) {
 	s.HullUUID = val
@@ -105,11 +98,6 @@ func (s *CreateOrderRequest) SetShieldUUID(val OptNilUUID) {
 // SetWeaponUUID sets the value of WeaponUUID.
 func (s *CreateOrderRequest) SetWeaponUUID(val OptNilUUID) {
 	s.WeaponUUID = val
-}
-
-// SetUserUUID sets the value of UserUUID.
-func (s *CreateOrderRequest) SetUserUUID(val uuid.UUID) {
-	s.UserUUID = val
 }
 
 // Ref: #

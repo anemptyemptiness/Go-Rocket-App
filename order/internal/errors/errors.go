@@ -12,7 +12,6 @@ var (
 	ErrShieldUUIDIncorrect              = errors.New("shield_uuid некорректен")
 	ErrWeaponUUIDIncorrect              = errors.New("weapon_uuid некорректен")
 	ErrHullUUIDAndEngineUUIDAreRequired = errors.New("hull_uuid и engine_uuid обязательные параметры")
-	ErrUserUUIDIsRequired               = errors.New("user_uuid обязательный параметр")
 	ErrPartIsOver                       = errors.New("деталь закончилась")
 	ErrOrderStatusIncorrect             = errors.New("некорректный статус заказа")
 	ErrOrderAlreadyPaid                 = errors.New("заказ уже оплачен")

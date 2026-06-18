@@ -15,19 +15,21 @@ const (
 	CodeNotFound           Code = "not_found"
 	CodeConflict           Code = "conflict"
 	CodeForbidden          Code = "forbidden"
-	CodeUnauthorized       Code = "unauthorized"
+	CodeUnauthenticated    Code = "Unauthenticated"
 	CodeResourceExhausted  Code = "resource_exhausted"
 	CodeFailedPrecondition Code = "failed_precondition"
 	CodeInternal           Code = "internal"
+	CodeAlreadyExists      Code = "already_exists"
 )
 
 var (
-	ErrInternal     = errors.New("internal error")
-	ErrInvalidArg   = errors.New("invalid argument")
-	ErrNotFound     = errors.New("not found")
-	ErrConflict     = errors.New("conflict")
-	ErrForbidden    = errors.New("forbidden")
-	ErrUnauthorized = errors.New("unauthorized")
+	ErrInternal        = errors.New("internal error")
+	ErrInvalidArg      = errors.New("invalid argument")
+	ErrNotFound        = errors.New("not found")
+	ErrConflict        = errors.New("conflict")
+	ErrForbidden       = errors.New("forbidden")
+	ErrUnauthenticated = errors.New("unauthenticated")
+	ErrAlreadyExist    = errors.New("already_exist")
 )
 
 type BusinessError struct {
@@ -105,7 +107,8 @@ func Conflict(err error) error           { return NewBusinessError(CodeConflict,
 func FailedPrecondition(err error) error { return NewBusinessError(CodeFailedPrecondition, err) }
 func ResourceExhausted(err error) error  { return NewBusinessError(CodeResourceExhausted, err) }
 func Forbidden(err error) error          { return NewBusinessError(CodeForbidden, err) }
-func Unauthorized(err error) error       { return NewBusinessError(CodeUnauthorized, err) }
+func Unauthenticated(err error) error    { return NewBusinessError(CodeUnauthenticated, err) }
+func AlreadyExists(err error) error      { return NewBusinessError(CodeAlreadyExists, err) }
 func Internal(err error) error           { return NewBusinessError(CodeInternal, err) }
 
 func IsBusinessError(err error) bool {
@@ -131,12 +134,14 @@ func (c Code) GRPCCode() codes.Code {
 		return codes.AlreadyExists
 	case CodeForbidden:
 		return codes.PermissionDenied
-	case CodeUnauthorized:
+	case CodeUnauthenticated:
 		return codes.Unauthenticated
 	case CodeResourceExhausted:
 		return codes.ResourceExhausted
 	case CodeFailedPrecondition:
 		return codes.FailedPrecondition
+	case CodeAlreadyExists:
+		return codes.AlreadyExists
 	case CodeInternal:
 		return codes.Internal
 	default:
@@ -154,11 +159,13 @@ func (c Code) HTTPCode() int {
 		return http.StatusConflict
 	case CodeForbidden:
 		return http.StatusForbidden
-	case CodeUnauthorized:
+	case CodeUnauthenticated:
 		return http.StatusUnauthorized
 	case CodeFailedPrecondition:
 		return http.StatusConflict
 	case CodeResourceExhausted:
+		return http.StatusConflict
+	case CodeAlreadyExists:
 		return http.StatusConflict
 	case CodeInternal:
 		return http.StatusInternalServerError

@@ -8,7 +8,7 @@ import (
 	orderapi "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
 	inventoryclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
 	paymentclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/payment/v1"
-	orderpaidproducer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/producer/order_paid"
+	orderpaidproducer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/producer/order_producer"
 	orderrepository "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/producer"

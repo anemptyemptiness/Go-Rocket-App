@@ -5,13 +5,18 @@
 // Цель отдельной сьюты — проверить асинхронную цепочку:
 //
 //	HTTP Pay → orderProducer (Kafka topic order.paid)
-//	         → реальный AssemblyService (build_time_sec=0 для скорости)
+//	         → реальный AssemblyService
 //	         → Kafka topic assembly.ship-assembled
 //	         → order/internal/consumer/assembly_consumer
 //	         → CommitParts + UPDATE orders SET status=ASSEMBLED
 //
-// Запускается только под тегом сборки e2e (см. solutions/week_5/Taskfile.yaml).
-// В обычном go test ./... не собирается, чтобы не платить временем старта Redpanda.
+// На неделе 6 в цепочке появилась session-авторизация: HTTP защищён Bearer-middleware,
+// Inventory gRPC — auth-interceptor, а session_uuid пробрасывается через Kafka headers
+// (см. platform/pkg/middleware/kafka). Поэтому в setup поднят ещё IAM (Postgres + Redis
+// + bufconn-сервер), а bufconn-клиент Inventory снабжён SessionForwarder
+//
+// Запускается только под тегом сборки e2e (см. solutions/week_6/Taskfile.yaml).
+// В обычном go test ./... не собирается, чтобы не платить временем старта Redpanda
 package e2e
 
 import (
@@ -35,26 +40,31 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
+	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	tcredpanda "github.com/testcontainers/testcontainers-go/modules/redpanda"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
+	assemblyApp "github.com/anemptyemptiness/Go-Rocket-App/assembly/pkg/app"
+	iamApp "github.com/anemptyemptiness/Go-Rocket-App/iam/pkg/app"
 	invApp "github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
 	inventoryClientPkg "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
-	assemblyconsumer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/ship_assembled"
+	assemblyconsumer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/assembly_consumer"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/interceptor"
+	orderProducer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/producer/order_producer"
 	orderRepoPkg "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/pkg/app"
 	payApp "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
-	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka"
 	wrappedKafkaConsumer "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/consumer"
 	wrappedKafkaProducer "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/producer"
-	eventsv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/events/v1"
+	kafkaMiddleware "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/middleware/kafka"
+	authv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/auth/v1"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
+	userv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/user/v1"
 )
 
 // Предзагруженные UUID и цены деталей (из migrations/inventory/00002_seed_parts.sql).
@@ -74,9 +84,16 @@ const (
 	// Redpanda на macOS поднимается ~5-10 секунд, оставим запас
 	redpandaImage = "docker.redpanda.com/redpandadata/redpanda:v25.1.7"
 
+	// Redis для IAM-сессий — версия совпадает с solutions/week_6/iam.env
+	redisImage = "redis:8.6.3-alpine3.23"
+
 	// numPartitions=1 достаточно: тесту важен факт доставки, не масштабирование
 	topicPartitions        = 1
 	topicReplicationFactor = 1
+
+	// sessionTTL — для e2e достаточно часа: тест короткий, сессия не успеет
+	// протухнуть, повторных логинов между шагами не делаем
+	sessionTTL = time.Hour
 )
 
 var (
@@ -96,6 +113,11 @@ var (
 	inventoryDBPool *pgxpool.Pool
 
 	inventoryClient inventoryv1.InventoryServiceClient
+
+	// IAM-клиенты экспортируем для lifecycle_test — там делаем Register/Login,
+	// чтобы получить sessionUUID для Bearer-заголовка
+	authSvcClient authv1.AuthServiceClient
+	userSvcClient userv1.UserServiceClient
 )
 
 // runMain — обёртка над m.Run, чтобы defer-cleanup отработал даже при panic в setup.
@@ -111,26 +133,40 @@ func runMain(m *testing.M) int {
 	cleanups := newCleanupStack()
 	defer cleanups.run(context.Background())
 
-	// 1-2. PostgreSQL × 2 (order + inventory) — те же контейнеры, что в api_test
+	// 1-3. PostgreSQL × 3 (order + inventory + iam) — три отдельных контейнера
 	orderPool := startPostgresAndMigrate(ctx, cleanups, "order-service", "../../../migrations/order")
 	inventoryPool := startPostgresAndMigrate(ctx, cleanups, "inventory-service", "../../../migrations/inventory")
+	iamPool := startPostgresAndMigrate(ctx, cleanups, "iam-service", "../../../migrations/iam")
 	orderDBPool = orderPool
 	inventoryDBPool = inventoryPool
 
 	txManager := mustNew(manager.New(trmpgx.NewDefaultFactory(orderPool)))
 
-	// 3. Inventory + Payment gRPC через bufconn — Kafka их не касается,
-	// поэтому остаются in-memory (быстрее, чем поднимать ещё контейнеры)
-	invConn := startBufconnGRPCInventory(ctx, cleanups, inventoryPool)
+	// 4. Redis — стораж сессий IAM
+	redisClient := startRedis(ctx, cleanups)
+
+	// 5. IAM gRPC через bufconn — нужен и Inventory-серверу (auth-interceptor),
+	// и Order HTTP-обработчику (middleware), и тесту (Register/Login).
+	// bcrypt.MinCost критичен — иначе тест становится в разы медленнее
+	iamConn := startBufconnGRPCIAM(ctx, cleanups, iamPool, redisClient)
+	authSvcClient = authv1.NewAuthServiceClient(iamConn)
+	userSvcClient = userv1.NewUserServiceClient(iamConn)
+
+	// 6. Inventory + Payment gRPC через bufconn — Kafka их не касается,
+	// поэтому остаются in-memory (быстрее, чем поднимать ещё контейнеры).
+	// Inventory снабжён auth-interceptor'ом на сервере и SessionForwarder'ом
+	// на клиенте — иначе CommitParts из assembly_consumer и GetPart из теста
+	// не прошли бы аутентификацию
+	invConn := startBufconnGRPCInventory(ctx, cleanups, inventoryPool, authSvcClient)
 	payConn := startBufconnGRPCPayment(ctx, cleanups)
 
 	inventoryClient = inventoryv1.NewInventoryServiceClient(invConn)
 	paymentClient := paymentv1.NewPaymentServiceClient(payConn)
 
-	// 4. Redpanda — реальная Kafka-совместимая инфраструктура
+	// 7. Redpanda — реальная Kafka-совместимая инфраструктура
 	broker := startRedpanda(ctx, cleanups)
 
-	// 5. Уникальные топики на прогон + явное создание через AdminClient.
+	// 8. Уникальные топики на прогон + явное создание через AdminClient.
 	// Sarama-консьюмер падает, если топика ещё нет, поэтому полагаться на
 	// auto-create нельзя — нужно дождаться готовности
 	suffix := time.Now().UnixNano()
@@ -140,25 +176,28 @@ func runMain(m *testing.M) int {
 	orderGroupID = fmt.Sprintf("e2e-%d-order-service", suffix)
 	createTopics(broker, orderPaidTopic, shipAssembledTopic)
 
-	// 6. Реальный Sarama-продьюсер для order — отправляет OrderPaid в Kafka
+	// 9. Реальный Sarama-продьюсер для order — отправляет OrderPaid в Kafka
 	syncProducer := mustNew(sarama.NewSyncProducer([]string{broker}, producerConfig()))
 	cleanups.add("order sarama producer", func(_ context.Context) error { return syncProducer.Close() })
 
 	orderPaidKafkaProducer := wrappedKafkaProducer.NewProducer(syncProducer, orderPaidTopic)
+	realOrderProducer := orderProducer.New(orderPaidKafkaProducer)
 
-	// 7. Order HTTP-сервер с реальным продюсером (НЕ noopProducer как в api_test)
-	handler := mustNew(app.NewHTTPHandler(orderPool, txManager, inventoryClient, paymentClient, orderPaidKafkaProducer))
+	// 10. Order HTTP-сервер с реальным продьюсером (НЕ noopProducer как в api_test).
+	// Дополнительно подключаем authSvcClient — на неделе 6 HTTP-обработчик обёрнут
+	// в Bearer-middleware
+	handler := mustNew(app.NewHTTPHandlerWithProducer(orderPool, txManager, inventoryClient, paymentClient, authSvcClient, realOrderProducer))
 	ts = httptest.NewServer(handler)
 	cleanups.add("httptest server", func(_ context.Context) error { ts.Close(); return nil })
 
-	// 8. Order ShipAssembled-консьюмер — реальный код из internal/consumer/assembly_consumer.
+	// 11. Order ShipAssembled-консьюмер — реальный код из internal/consumer/assembly_consumer.
 	// Слушает топик ShipAssembled и переводит заказ в ASSEMBLED через CommitParts
-	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, inventoryClient)
+	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, txManager, inventoryClient)
 
-	// 9. Реальный AssemblyService — тот же код, что в проде.
-	// build_time_sec выставлен в 0, чтобы цепочка пробегала за миллисекунды
-	// вместо 5-15 секунд. Это поднимает покрытие на весь assembly-модуль:
-	// consumer/order_paid, service/assembly, producer/ship_assembled
+	// 12. Реальный AssemblyService — тот же код, что в проде.
+	// Используется тот же код, что и в проде: consumer/order_paid → service/assembly →
+	// producer/ship_assembled. Контракт обоих proto-сообщений проверяется через
+	// реальные decode.go / encode-логику assembly-сервиса
 	startAssemblyService(ctx, cleanups, broker)
 
 	return m.Run()
@@ -228,6 +267,31 @@ func runMigrations(dsn, migrationsDir string) error {
 	return goose.Up(db, absDir)
 }
 
+// startRedis поднимает Redis-контейнер для сессий IAM. Возвращает уже подключённый
+// redis-клиент: и контейнер, и клиент закрываются через cleanups
+func startRedis(ctx context.Context, cleanups *cleanupStack) *redis.Client {
+	container, err := tcredis.Run(ctx, redisImage)
+	if err != nil {
+		panic(fmt.Errorf("redis: %w", err))
+	}
+	cleanups.add("redis container", func(c context.Context) error { return container.Terminate(c) })
+
+	addr, err := container.ConnectionString(ctx)
+	if err != nil {
+		panic(fmt.Errorf("redis connection string: %w", err))
+	}
+
+	const prefix = "redis://"
+	if len(addr) > len(prefix) {
+		addr = addr[len(prefix):]
+	}
+
+	client := redis.NewClient(&redis.Options{Addr: addr})
+	cleanups.add("redis client", func(_ context.Context) error { return client.Close() })
+
+	return client
+}
+
 func startRedpanda(ctx context.Context, cleanups *cleanupStack) string {
 	container, err := tcredpanda.Run(
 		ctx, redpandaImage,
@@ -267,9 +331,36 @@ func createTopics(broker string, topics ...string) {
 	}
 }
 
-func startBufconnGRPCInventory(ctx context.Context, cleanups *cleanupStack, pool *pgxpool.Pool) *grpc.ClientConn {
+// startBufconnGRPCIAM поднимает IAM gRPC-сервер через bufconn и возвращает
+// клиентское соединение. bcrypt.MinCost — критичен для скорости тестов
+func startBufconnGRPCIAM(ctx context.Context, cleanups *cleanupStack, pool *pgxpool.Pool, redisClient *redis.Client) *grpc.ClientConn {
 	lis := bufconn.Listen(bufSize)
-	server := grpc.NewServer(invApp.Interceptors()...)
+	server := iamApp.NewGRPCServer(pool, redisClient, sessionTTL, bcrypt.MinCost)
+
+	go func() {
+		if err := server.Serve(lis); err != nil {
+			panic(fmt.Errorf("iam grpc serve: %w", err))
+		}
+	}()
+	cleanups.add("iam grpc server", func(_ context.Context) error { server.Stop(); return nil })
+
+	conn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		panic(fmt.Errorf("iam grpc client: %w", err))
+	}
+	cleanups.add("iam grpc conn", func(_ context.Context) error { return conn.Close() })
+
+	_ = ctx
+	return conn
+}
+
+func startBufconnGRPCInventory(ctx context.Context, cleanups *cleanupStack, pool *pgxpool.Pool, authClient authv1.AuthServiceClient) *grpc.ClientConn {
+	lis := bufconn.Listen(bufSize)
+	server := grpc.NewServer(invApp.Interceptors(authClient)...)
 	invApp.RegisterServices(server, pool)
 
 	go func() {
@@ -279,10 +370,14 @@ func startBufconnGRPCInventory(ctx context.Context, cleanups *cleanupStack, pool
 	}()
 	cleanups.add("inventory grpc server", func(_ context.Context) error { server.Stop(); return nil })
 
+	// SessionForwarder автоматически пробрасывает session-uuid из контекста
+	// в исходящие gRPC metadata — нужен и assembly_consumer'у для CommitParts,
+	// и helper'у getStock в тесте
 	conn, err := grpc.NewClient(
 		"passthrough:///bufnet",
 		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(interceptor.SessionForwarder()),
 	)
 	if err != nil {
 		panic(fmt.Errorf("inventory grpc client: %w", err))
@@ -328,21 +423,31 @@ func startOrderShipAssembledConsumer(
 	cleanups *cleanupStack,
 	broker string,
 	pool *pgxpool.Pool,
+	txManager *manager.Manager,
 	invClient inventoryv1.InventoryServiceClient,
 ) {
 	cg := mustNew(sarama.NewConsumerGroup([]string{broker}, orderGroupID, consumerConfig()))
 	cleanups.add("order ship-assembled consumer group", func(_ context.Context) error { return cg.Close() })
 
-	wrappedConsumer := wrappedKafkaConsumer.NewConsumer(cg, []string{shipAssembledTopic})
+	// ConsumerSession middleware вытаскивает session_uuid из Kafka-заголовка
+	// и кладёт в контекст — иначе assembly_consumer не сможет вызвать защищённый
+	// Inventory.CommitParts (тот требует session-uuid в gRPC metadata)
+	wrappedConsumer := wrappedKafkaConsumer.NewConsumer(
+		cg,
+		[]string{shipAssembledTopic},
+		wrappedKafkaConsumer.WithMiddlewares(
+			kafkaMiddleware.ConsumerSession(),
+		),
+	)
 
 	// Реальный код из order/internal/consumer/assembly_consumer.
 	// Репозиторий и inventory-клиент берём из тех же internal-пакетов,
 	// что использует прод-DI (order/internal/app/di.go)
-	svc := assemblyconsumer.New(
+	svc := assemblyconsumer.NewService(
 		wrappedConsumer,
-		nil,
-		orderRepoPkg.New(pool),
+		orderRepoPkg.New(pool, txManager),
 		inventoryClientPkg.New(invClient),
+		txManager,
 	)
 
 	go func() {
@@ -355,10 +460,12 @@ func startOrderShipAssembledConsumer(
 }
 
 // startAssemblyService поднимает реальный AssemblyService через assembly/pkg/app.
-// build_time_sec=0 — пропускаем эмуляцию задержки, чтобы тест не ждал 5-15 секунд.
 // Используется тот же код, что и в проде: consumer/order_paid → service/assembly →
-// producer/ship_assembled. Контракт обоих proto-сообщений проверяется через
-// реальные decode.go / encode-логику assembly-сервиса
+// producer/ship_assembled. ConsumerSession middleware подключается внутри pkg/app —
+// без неё session_uuid не пробросится в ShipAssembled-сообщение
+//
+// На неделе 6 build_time зашит константами 5-15 сек, поэтому таймаут ожидания
+// ASSEMBLED в тесте увеличен — см. waitForOrderStatus в lifecycle_test
 func startAssemblyService(ctx context.Context, cleanups *cleanupStack, broker string) {
 	cg := mustNew(sarama.NewConsumerGroup([]string{broker}, assemblyGroupID, consumerConfig()))
 	cleanups.add("assembly consumer group", func(_ context.Context) error { return cg.Close() })
@@ -366,34 +473,13 @@ func startAssemblyService(ctx context.Context, cleanups *cleanupStack, broker st
 	syncProducer := mustNew(sarama.NewSyncProducer([]string{broker}, producerConfig()))
 	cleanups.add("assembly sync producer", func(_ context.Context) error { return syncProducer.Close() })
 
-	consumer := wrappedKafkaConsumer.NewConsumer(cg, []string{orderPaidTopic})
-	producer := wrappedKafkaProducer.NewProducer(syncProducer, shipAssembledTopic)
+	svc := assemblyApp.New(syncProducer, cg, assemblyApp.Config{
+		OrderPaidTopic:     orderPaidTopic,
+		ShipAssembledTopic: shipAssembledTopic,
+	})
 
 	go func() {
-		if err := consumer.Consume(ctx, func(msgCtx context.Context, msg kafka.Message) error {
-			var orderPaid eventsv1.OrderPaid
-			if err := proto.Unmarshal(msg.Value, &orderPaid); err != nil {
-				return err
-			}
-
-			shipAssembled := &eventsv1.ShipAssembled{
-				EventUuid:    orderPaid.GetEventUuid(),
-				OrderUuid:    orderPaid.GetOrderUuid(),
-				UserUuid:     orderPaid.GetUserUuid(),
-				BuildTimeSec: 0,
-				AssembledAt:  timestamppb.Now(),
-			}
-
-			payload, err := proto.Marshal(shipAssembled)
-			if err != nil {
-				return err
-			}
-
-			return producer.Send(msgCtx, &kafka.Message{
-				Key:   []byte(shipAssembled.GetEventUuid()),
-				Value: payload,
-			})
-		}); err != nil {
+		if err := svc.RunConsumer(ctx); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "assembly service stopped: %v\n", err)
 		}
 	}()
