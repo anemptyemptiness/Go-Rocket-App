@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
+	errs "github.com/anemptyemptiness/Go-Rocket-App/iam/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/iam/internal/model"
 	"github.com/anemptyemptiness/Go-Rocket-App/iam/internal/repository/converter"
 	"github.com/anemptyemptiness/Go-Rocket-App/iam/internal/repository/record"
@@ -35,7 +36,7 @@ func (r *userRepository) GetByUUID(ctx context.Context, userUUID uuid.UUID) (mod
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return model.User{}, fmt.Errorf("%w: uuid=%s", err, userUUID)
+			return model.User{}, fmt.Errorf("%w: uuid=%s", errs.ErrUserNotFound, userUUID)
 		}
 		return model.User{}, err
 	}

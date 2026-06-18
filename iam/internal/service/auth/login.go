@@ -20,7 +20,7 @@ func (s *service) Login(ctx context.Context, loginInput input.LoginInput) (uuid.
 	user, err := s.userRepo.GetByLogin(ctx, loginInput.Login)
 	if err != nil {
 		if errors.Is(err, errs.ErrUserNotFound) {
-			return uuid.Nil, pkgerr.NotFound(err)
+			return uuid.Nil, pkgerr.Unauthenticated(errs.ErrInvalidCredentials)
 		}
 		return uuid.Nil, pkgerr.Internal(err)
 	}

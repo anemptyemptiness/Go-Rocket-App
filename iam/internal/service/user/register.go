@@ -31,7 +31,7 @@ func (s *service) Register(ctx context.Context, registrationInfo input.RegisterI
 		return uuid.Nil, pkgerr.AlreadyExists(errs.ErrUserAlreadyExists)
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), s.cryptCost)
 	if err != nil {
 		return uuid.Nil, pkgerr.Internal(err)
 	}

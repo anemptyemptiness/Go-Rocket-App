@@ -24,3 +24,6 @@ session:
 
 logger:
   level: "info"
+
+encryption:
+  cost: 10

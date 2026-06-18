@@ -192,7 +192,7 @@ func Test_Register(t *testing.T) {
 
 			tc.setupMock(userRepo)
 
-			userSvc := usersvc.New(userRepo)
+			userSvc := usersvc.New(userRepo, bcrypt.MinCost)
 
 			userUuid, err := userSvc.Register(ctx, tc.args.req)
 			if tc.expected.err != nil {

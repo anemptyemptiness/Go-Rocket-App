@@ -116,7 +116,7 @@ func (d *diContainer) AuthService(ctx context.Context) apiauth.AuthService {
 
 func (d *diContainer) UserService(ctx context.Context) apiuser.UserService {
 	if d.userService == nil {
-		d.userService = usersvc.New(d.UserRepository(ctx))
+		d.userService = usersvc.New(d.UserRepository(ctx), config.AppConfig().Encryption.Cost)
 	}
 
 	return d.userService
@@ -124,7 +124,7 @@ func (d *diContainer) UserService(ctx context.Context) apiuser.UserService {
 
 func (d *diContainer) SessionRepository(ctx context.Context) authsvc.SessionRepository {
 	if d.sessionRepository == nil {
-		d.sessionRepository = sessionrepo.New(d.RedisClient(ctx))
+		d.sessionRepository = sessionrepo.New(d.RedisClient(ctx), config.AppConfig().Session.TTL)
 	}
 
 	return d.sessionRepository

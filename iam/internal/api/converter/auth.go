@@ -14,6 +14,7 @@ import (
 
 func SessionModelToProto(session model.Session) *commonv1.Session {
 	pbSession := &commonv1.Session{
+		Uuid:      session.UUID.String(),
 		CreatedAt: timestamppb.New(session.CreatedAt),
 		ExpiresAt: timestamppb.New(session.ExpiresAt),
 	}

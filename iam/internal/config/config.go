@@ -11,11 +11,12 @@ import (
 var appConfig *config
 
 type config struct {
-	GRPC    grpcConfig     `yaml:"grpc"`
-	Logger  loggerConfig   `yaml:"logger"`
-	PG      postgresConfig `yaml:"postgres"`
-	Redis   redisConfig    `yaml:"redis"`
-	Session sessionConfig  `yaml:"session"`
+	GRPC       grpcConfig       `yaml:"grpc"`
+	Logger     loggerConfig     `yaml:"logger"`
+	PG         postgresConfig   `yaml:"postgres"`
+	Redis      redisConfig      `yaml:"redis"`
+	Session    sessionConfig    `yaml:"session"`
+	Encryption encryptionConfig `yaml:"encryption"`
 }
 
 const defaultConfigPath = "config.local.yaml"

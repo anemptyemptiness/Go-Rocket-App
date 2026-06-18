@@ -114,7 +114,7 @@ func Test_Login(t *testing.T) {
 				},
 			},
 			expected: expected{
-				err: errs.ErrUserNotFound,
+				err: errs.ErrInvalidCredentials,
 			},
 			setupMock: func(sessionRepo *authmocks.SessionRepository, userRepo *usermocks.UserRepository) {
 				userRepo.EXPECT().

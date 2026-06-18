@@ -1,5 +1,3 @@
-//go:build apitest
-
 // Package tests содержит интеграционные API-тесты IAM-сервиса
 //
 // Поднимает PostgreSQL и Redis через testcontainers-go и запускает gRPC-сервер
@@ -17,7 +15,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
