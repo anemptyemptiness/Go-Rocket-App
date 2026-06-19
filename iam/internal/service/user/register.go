@@ -38,6 +38,9 @@ func (s *service) Register(ctx context.Context, registrationInfo input.RegisterI
 
 	userUUID, err := s.userRepo.Create(ctx, login, string(hash))
 	if err != nil {
+		if errors.Is(err, errs.ErrUserAlreadyExists) {
+			return uuid.Nil, pkgerr.AlreadyExists(err)
+		}
 		return uuid.Nil, pkgerr.Internal(err)
 	}
 

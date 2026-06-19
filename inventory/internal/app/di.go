@@ -15,7 +15,6 @@ import (
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
 	iam "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/client/grpc/iam/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/config"
-	iamsvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
 	inventoryrepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
 	applicationsvcpart "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/application/part"
 	domainsvcchecker "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/domain/compatibility_checker"
@@ -31,7 +30,7 @@ type diContainer struct {
 	compatibilityChecker applicationsvcpart.CompatibilityChecker
 	inventoryRepo        applicationsvcpart.Repository
 	txManager            applicationsvcpart.TxManager
-	iamClient            iamsvc.IAMService
+	iamClient            iam.Client
 }
 
 func (d *diContainer) PGPool(ctx context.Context) *pgxpool.Pool {
@@ -109,7 +108,7 @@ func (d *diContainer) TxManager(ctx context.Context) applicationsvcpart.TxManage
 	return d.txManager
 }
 
-func (d *diContainer) IAMClient(_ context.Context) iamsvc.IAMService {
+func (d *diContainer) IAMClient(_ context.Context) iam.Client {
 	if d.iamClient == nil {
 		iamConn, err := grpc.NewClient(config.AppConfig().IAMClient.Address(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -120,7 +119,7 @@ func (d *diContainer) IAMClient(_ context.Context) iamsvc.IAMService {
 			}),
 		)
 		if err != nil {
-			slog.Error("не удалось подключиться к IAMClient", "error", err)
+			slog.Error("не удалось подключиться к Client", "error", err)
 			os.Exit(1)
 		}
 
@@ -129,7 +128,7 @@ func (d *diContainer) IAMClient(_ context.Context) iamsvc.IAMService {
 			if err != nil {
 				slog.Error("не удалось закрыть gRPC соединение inventory client", "error", err)
 			} else {
-				slog.Info("соединение с IAMClient закрыто")
+				slog.Info("соединение с Client закрыто")
 			}
 			return nil
 		})
@@ -137,7 +136,7 @@ func (d *diContainer) IAMClient(_ context.Context) iamsvc.IAMService {
 		iamClientGRPC := authv1.NewAuthServiceClient(iamConn)
 		d.iamClient = iam.New(iamClientGRPC)
 
-		slog.Info("подключение к IAMClient установлено")
+		slog.Info("подключение к Client установлено")
 	}
 
 	return d.iamClient

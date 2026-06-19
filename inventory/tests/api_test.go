@@ -9,6 +9,7 @@ package tests
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"testing"
 
@@ -24,6 +25,7 @@ import (
 	iamClient "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/client/grpc/iam/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/auth"
+	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	authv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/auth/v1"
 	commonv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/common/v1"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
@@ -56,7 +58,7 @@ func (s *stubInventoryServer) GetPart(ctx context.Context, _ *inventoryv1.GetPar
 	}, nil
 }
 
-func startStubAuth(t *testing.T, stub *stubAuthServer) *iamClient.Client {
+func startStubAuth(t *testing.T, stub *stubAuthServer) iamClient.Client {
 	t.Helper()
 	lis := bufconn.Listen(bufSize)
 	server := grpc.NewServer()
@@ -76,11 +78,14 @@ func startStubAuth(t *testing.T, stub *stubAuthServer) *iamClient.Client {
 	return iamClient.New(authv1.NewAuthServiceClient(conn))
 }
 
-func startInventory(t *testing.T, authClient *iamClient.Client) inventoryv1.InventoryServiceClient {
+func startInventory(t *testing.T, authClient iamClient.Client) inventoryv1.InventoryServiceClient {
 	t.Helper()
 	lis := bufconn.Listen(bufSize)
 	server := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(interceptor.Auth(authClient)),
+		grpc.ChainUnaryInterceptor(
+			pkgerr.UnaryErrorInterceptor(slog.Default()),
+			interceptor.UnaryAuthInterceptor(authClient),
+		),
 	)
 	inventoryv1.RegisterInventoryServiceServer(server, &stubInventoryServer{})
 
