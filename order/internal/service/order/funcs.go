@@ -12,6 +12,7 @@ import (
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/auth"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
@@ -71,6 +72,8 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
+		userUUID, _ := auth.UserUUIDFromContext(ctx)
+		order.UserUUID = userUUID.String()
 		order.Items = orderItems
 		order.TotalPrice = totalPrice
 		order.Status = model.OrderStatusPendingPayment

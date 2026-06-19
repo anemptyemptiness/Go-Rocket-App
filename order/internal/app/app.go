@@ -11,6 +11,7 @@ import (
 	"github.com/go-faster/errors"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/config"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/middleware"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/logger"
 )
@@ -120,7 +121,7 @@ func (a *App) initLogger(_ context.Context) {
 func (a *App) initHTTPServer(ctx context.Context) {
 	a.httpServer = &http.Server{
 		Addr:              config.AppConfig().HTTP.Address(),
-		Handler:           a.diContainer.OrderServer(ctx),
+		Handler:           middleware.AuthMiddleware(a.diContainer.IAMClient(ctx))(a.diContainer.OrderServer(ctx)),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,

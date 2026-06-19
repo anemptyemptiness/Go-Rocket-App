@@ -18,4 +18,9 @@ var (
 	ErrOrderAlreadyCancelled            = errors.New("заказ уже отменён")
 	ErrOrderAssembled                   = errors.New("заказ уже собран")
 	ErrInvalidPartUUID                  = errors.New("идентификатор детали невалидный")
+
+	// AuthErrors.
+	ErrEmptyMetadata    = errors.New("отсутствует metadata")
+	ErrEmptySessionUUID = errors.New("отсутствует session-uuid")
+	ErrExpiredSession   = errors.New("недействительная сессия")
 )

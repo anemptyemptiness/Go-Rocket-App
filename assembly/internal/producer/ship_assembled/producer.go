@@ -9,6 +9,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/model"
 	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/service/assembly"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka"
+	kafkamiddleware "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/middleware/kafka"
 	eventsv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/events/v1"
 )
 
@@ -37,8 +38,9 @@ func (s *service) Produce(ctx context.Context, event model.ShipAssembledEvent) e
 	}
 
 	err = s.shipAssembledProducer.Send(ctx, &kafka.Message{
-		Key:   []byte(event.EventUUID()),
-		Value: payload,
+		Key:     []byte(event.EventUUID()),
+		Value:   payload,
+		Headers: kafkamiddleware.ProducerSessionHeaders(ctx),
 	})
 	if err != nil {
 		return err

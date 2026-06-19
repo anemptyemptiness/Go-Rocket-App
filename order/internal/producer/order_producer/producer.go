@@ -8,6 +8,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	ordersvc "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka"
+	kafkamiddleware "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/middleware/kafka"
 	eventsv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/events/v1"
 )
 
@@ -34,8 +35,9 @@ func (s *service) Produce(ctx context.Context, event model.OrderPaidEvent) error
 	}
 
 	err = s.orderPaidProducer.Send(ctx, &kafka.Message{
-		Key:   []byte(event.EventUUID()),
-		Value: payload,
+		Key:     []byte(event.EventUUID()),
+		Value:   payload,
+		Headers: kafkamiddleware.ProducerSessionHeaders(ctx),
 	})
 	if err != nil {
 		return err
