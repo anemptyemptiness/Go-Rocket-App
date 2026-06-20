@@ -29,10 +29,6 @@ func (s *service) Get(ctx context.Context, orderUUID string) (model.Order, error
 }
 
 func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (model.Order, error) {
-	if req.HullUUID == "" || req.EngineUUID == "" {
-		return model.Order{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
-	}
-
 	seen := make(map[string]struct{})
 	for _, id := range req.PartUUIDs() {
 		if id == "" {
@@ -72,7 +68,11 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
-		userUUID, _ := auth.UserUUIDFromContext(ctx)
+		userUUID, ok := auth.UserUUIDFromContext(ctx)
+		if !ok {
+			return pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
+		}
+
 		order.UserUUID = userUUID.String()
 		order.Items = orderItems
 		order.TotalPrice = totalPrice

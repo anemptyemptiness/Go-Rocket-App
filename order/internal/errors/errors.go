@@ -20,7 +20,6 @@ var (
 	ErrInvalidPartUUID                  = errors.New("идентификатор детали невалидный")
 
 	// AuthErrors.
-	ErrEmptyMetadata    = errors.New("отсутствует metadata")
+	ErrEmptyUserUUID    = errors.New("отсутствует идентификатор пользователя")
 	ErrEmptySessionUUID = errors.New("отсутствует session-uuid")
-	ErrExpiredSession   = errors.New("недействительная сессия")
 )

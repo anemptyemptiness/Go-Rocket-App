@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	svcmocks "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/auth"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
@@ -28,9 +30,11 @@ func TestCreate_Success(t *testing.T) {
 		engineUUID = gofakeit.UUID()
 		shieldUUID = gofakeit.UUID()
 		weaponUUID = gofakeit.UUID()
-		userUUID   = gofakeit.UUID()
+		userUUID   = uuid.New()
 		now        = time.Now()
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	req := input.CreateOrderRequest{
 		HullUUID:   hullUUID,
@@ -112,7 +116,7 @@ func TestCreate_Success(t *testing.T) {
 
 	order := model.Order{
 		Items:      items,
-		UserUUID:   userUUID,
+		UserUUID:   userUUID.String(),
 		TotalPrice: int64(100000),
 		Status:     model.OrderStatusPendingPayment,
 	}
@@ -138,32 +142,6 @@ func TestCreate_Success(t *testing.T) {
 		assert.Equal(t, items[i].PartType, item.PartType)
 		assert.Equal(t, items[i].Price, item.Price)
 	}
-}
-
-func TestCreate_HullAndEngineRequired(t *testing.T) {
-	t.Parallel()
-
-	var (
-		ctx             = context.Background()
-		hullUUIDEmpty   = ""
-		engineUUIDEmpty = ""
-	)
-
-	repo := svcmocks.NewOrderRepository(t)
-	paymentClient := svcmocks.NewPaymentClient(t)
-	inventoryClient := svcmocks.NewInventoryClient(t)
-	txManager := svcmocks.NewTxManager(t)
-	producer := svcmocks.NewOrderPaidProducerService(t)
-
-	svc := orderservice.New(repo, paymentClient, inventoryClient, txManager, producer)
-
-	order, err := svc.Create(ctx, input.CreateOrderRequest{
-		HullUUID:   hullUUIDEmpty,
-		EngineUUID: engineUUIDEmpty,
-	})
-	require.Error(t, err)
-	assert.ErrorIs(t, err, errs.ErrHullUUIDAndEngineUUIDAreRequired)
-	assert.Empty(t, order)
 }
 
 func TestCreate_PartNotFound(t *testing.T) {
@@ -264,8 +242,11 @@ func TestCreate_ValidateCompatibilityError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = uuid.New()
 		unexpectedErr = assert.AnError
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	parts := []model.Part{
 		{
@@ -328,8 +309,11 @@ func TestCreate_ReservePartsError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = uuid.New()
 		unexpectedErr = assert.AnError
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	parts := []model.Part{
 		{
@@ -396,8 +380,11 @@ func TestCreate_RepoError(t *testing.T) {
 		ctx           = context.Background()
 		hullUUID      = gofakeit.UUID()
 		engineUUID    = gofakeit.UUID()
+		userUUID      = uuid.New()
 		unexpectedErr = assert.AnError
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	parts := []model.Part{
 		{
@@ -448,6 +435,7 @@ func TestCreate_RepoError(t *testing.T) {
 				PartType: model.PartTypeEngine,
 			},
 		},
+		UserUUID:   userUUID.String(),
 		TotalPrice: int64(30000),
 		Status:     model.OrderStatusPendingPayment,
 	}

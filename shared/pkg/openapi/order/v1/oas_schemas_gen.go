@@ -130,6 +130,10 @@ func (s *CreateOrderResponse) SetTotalPrice(val int64) {
 
 func (*CreateOrderResponse) createOrderRes() {}
 
+type CreateOrderUnauthorized Error
+
+func (*CreateOrderUnauthorized) createOrderRes() {}
+
 // Ref: #
 type Error struct {
 	// HTTP-код ошибки.

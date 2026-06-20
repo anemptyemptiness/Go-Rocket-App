@@ -57,6 +57,11 @@ func CreateOrderRequestToModel(req *orderv1.CreateOrderRequest) (input.CreateOrd
 		return input.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrEmptyRequest)
 	}
 
+	if req.GetHullUUID().String() == "" || req.GetHullUUID() == uuid.Nil ||
+		req.GetEngineUUID().String() == "" || req.GetEngineUUID() == uuid.Nil {
+		return input.CreateOrderRequest{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
+	}
+
 	var shieldUUID *string
 	if v := req.GetShieldUUID(); v.IsSet() && !v.IsNull() {
 		id, ok := v.Get()

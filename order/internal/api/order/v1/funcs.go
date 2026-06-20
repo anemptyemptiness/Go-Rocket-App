@@ -39,6 +39,7 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 			pkgerr.WithFailedPrecondition[orderv1.CreateOrderConflict](),
 			pkgerr.WithResourceExhausted[orderv1.CreateOrderConflict](),
 			pkgerr.WithInternal[orderv1.CreateOrderInternalServerError](),
+			pkgerr.WithUnauthorized[orderv1.CreateOrderUnauthorized](),
 		)
 	}
 

@@ -107,14 +107,7 @@ func TestCreateOrder(t *testing.T) {
 				},
 				wantErr: true,
 			},
-			setupMock: func(svc *mocks.OrderService) {
-				svc.EXPECT().
-					Create(ctx, input.CreateOrderRequest{
-						HullUUID:   uuid.Nil.String(),
-						EngineUUID: engineUUID,
-					}).
-					Return(model.Order{}, pkgerr.InvalidArgument(ordererrs.ErrHullUUIDAndEngineUUIDAreRequired))
-			},
+			setupMock: func(svc *mocks.OrderService) {},
 		},
 		{
 			name: "ошибка: conflict",
