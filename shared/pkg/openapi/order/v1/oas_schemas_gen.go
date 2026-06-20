@@ -32,6 +32,10 @@ type CancelOrderResponse struct{}
 
 func (*CancelOrderResponse) cancelOrderRes() {}
 
+type CancelOrderUnauthorized Error
+
+func (*CancelOrderUnauthorized) cancelOrderRes() {}
+
 type CreateOrderBadRequest Error
 
 func (*CreateOrderBadRequest) createOrderRes() {}
@@ -173,6 +177,10 @@ func (*GetOrderInternalServerError) getOrderRes() {}
 type GetOrderNotFound Error
 
 func (*GetOrderNotFound) getOrderRes() {}
+
+type GetOrderUnauthorized Error
+
+func (*GetOrderUnauthorized) getOrderRes() {}
 
 // NewOptNilPaymentMethod returns new OptNilPaymentMethod with value set to v.
 func NewOptNilPaymentMethod(v PaymentMethod) OptNilPaymentMethod {
@@ -542,6 +550,10 @@ func (s *PayOrderResponse) SetTransactionUUID(val uuid.UUID) {
 }
 
 func (*PayOrderResponse) payOrderRes() {}
+
+type PayOrderUnauthorized Error
+
+func (*PayOrderUnauthorized) payOrderRes() {}
 
 // Способ оплаты.
 // Ref: #

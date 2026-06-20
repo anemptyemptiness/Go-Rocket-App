@@ -9,10 +9,13 @@ import (
 	"google.golang.org/grpc"
 
 	inventoryapi "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/api/inventory/v1"
+	iamclientv1 "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/client/grpc/iam/v1"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
 	partrepo "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/repository/part"
 	applicationpartsvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/application/part"
 	domainpartsvc "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/service/domain/compatibility_checker"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
+	authv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/auth/v1"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 )
 
@@ -31,10 +34,12 @@ func RegisterServices(grpcServer *grpc.Server, pool *pgxpool.Pool) {
 	inventoryv1.RegisterInventoryServiceServer(grpcServer, api)
 }
 
-func Interceptors() []grpc.ServerOption {
+func Interceptors(iamClient authv1.AuthServiceClient) []grpc.ServerOption {
+	client := iamclientv1.New(iamClient)
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			pkgerr.UnaryErrorInterceptor(slog.Default()),
+			interceptor.UnaryAuthInterceptor(client),
 		),
 	}
 

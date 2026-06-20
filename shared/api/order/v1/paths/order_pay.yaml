@@ -25,6 +25,12 @@ post:
         application/json:
           schema:
             $ref: '../components/errors/error.yaml'
+    '401':
+      description: Неавторизован
+      content:
+        application/json:
+          schema:
+            $ref: '../components/errors/error.yaml'
     '404':
       description: Заказ не найден
       content:

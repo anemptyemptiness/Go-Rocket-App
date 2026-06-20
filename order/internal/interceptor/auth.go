@@ -13,7 +13,7 @@ import (
 
 const SessionMetadataKey = "session-uuid"
 
-func SessionUnaryInterceptor() grpc.UnaryClientInterceptor {
+func SessionForwarder() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		sessionUUID, exists := auth.SessionUUIDFromContext(ctx)
 		if !exists {

@@ -133,7 +133,7 @@ func (d *diContainer) PaymentClient(_ context.Context) ordersvc.PaymentClient {
 				PermitWithoutStream: keepAlivePermitWithoutStream,
 			}),
 			grpc.WithChainUnaryInterceptor(
-				interceptor.SessionUnaryInterceptor(),
+				interceptor.SessionForwarder(),
 			),
 		)
 		if err != nil {
@@ -205,7 +205,7 @@ func (d *diContainer) InventoryClient(_ context.Context) ordersvc.InventoryClien
 				PermitWithoutStream: keepAlivePermitWithoutStream,
 			}),
 			grpc.WithChainUnaryInterceptor(
-				interceptor.SessionUnaryInterceptor(),
+				interceptor.SessionForwarder(),
 			),
 		)
 		if err != nil {
@@ -299,7 +299,6 @@ func (d *diContainer) ShipAssembledConsumer(ctx context.Context) ShipAssembledCo
 	if d.shipAssembledConsumer == nil {
 		d.shipAssembledConsumer = shipassembledconsumer.New(
 			d.WrappedShipAssembledConsumer(ctx),
-			d.OrderService(ctx),
 			d.OrderRepository(ctx),
 			d.InventoryClient(ctx),
 		)

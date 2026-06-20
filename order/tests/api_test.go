@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -38,15 +39,23 @@ import (
 	iamApp "github.com/anemptyemptiness/Go-Rocket-App/iam/pkg/app"
 	invApp "github.com/anemptyemptiness/Go-Rocket-App/inventory/pkg/app"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/interceptor"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/pkg/app"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/tests/testutil"
 	payApp "github.com/anemptyemptiness/Go-Rocket-App/payment/pkg/app"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/auth"
 	authv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/auth/v1"
 	commonv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/common/v1"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 	userv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/user/v1"
 )
+
+type noopOrderPaidProducer struct{}
+
+func (noopOrderPaidProducer) Produce(context.Context, model.OrderPaidEvent) error {
+	return nil
+}
 
 // Предзагруженные UUID и цены деталей (из migrations/inventory/00002_seed_parts.sql)
 const (
@@ -75,12 +84,13 @@ var (
 	payLis *bufconn.Listener
 	iamLis *bufconn.Listener
 
-	inventoryClient inventoryv1.InventoryServiceClient
-	paymentClient   paymentv1.PaymentServiceClient
-	userClient      userv1.UserServiceClient
-	authSvcClient   authv1.AuthServiceClient
-	httpClient      = &http.Client{Timeout: 10 * time.Second}
-	ts              *httptest.Server
+	inventoryClient    inventoryv1.InventoryServiceClient
+	inventoryRawClient inventoryv1.InventoryServiceClient
+	paymentClient      paymentv1.PaymentServiceClient
+	userClient         userv1.UserServiceClient
+	authSvcClient      authv1.AuthServiceClient
+	httpClient         = &http.Client{Timeout: 10 * time.Second}
+	ts                 *httptest.Server
 
 	// orderDBPool нужен в тестах, где статус заказа нужно обновить в обход API —
 	// например, чтобы проверить Cancel по ASSEMBLED (через API статус туда не попадает
@@ -307,6 +317,18 @@ func TestMain(m *testing.M) {
 	}
 	inventoryClient = inventoryv1.NewInventoryServiceClient(invConn)
 
+	// Raw-клиент нужен только для тестов серверного auth-interceptor. Если подключить
+	// SessionForwarder, запрос без сессии будет отклонён на клиенте и до сервера не дойдёт.
+	invRawConn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		grpc.WithContextDialer(invBufDialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		panic(err)
+	}
+	inventoryRawClient = inventoryv1.NewInventoryServiceClient(invRawConn)
+
 	// 11. Payment gRPC через bufconn (без auth)
 	payLis = bufconn.Listen(bufSize)
 	payGRPCServer := grpc.NewServer(payApp.Interceptors()...)
@@ -328,7 +350,7 @@ func TestMain(m *testing.M) {
 	paymentClient = paymentv1.NewPaymentServiceClient(payConn)
 
 	// 12. Order HTTP через httptest, с реальным IAM-клиентом для middleware
-	orderServer, err := app.NewHTTPHandler(orderPool, txManager, inventoryClient, paymentClient, authSvcClient)
+	orderServer, err := app.NewHTTPHandlerWithProducer(orderPool, txManager, inventoryClient, paymentClient, authSvcClient, noopOrderPaidProducer{})
 	if err != nil {
 		panic(err)
 	}
@@ -346,6 +368,9 @@ func TestMain(m *testing.M) {
 
 	ts.Close()
 	if err = invConn.Close(); err != nil {
+		panic(err)
+	}
+	if err = invRawConn.Close(); err != nil {
 		panic(err)
 	}
 	if err = payConn.Close(); err != nil {
@@ -379,16 +404,16 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// authCtx добавляет session-uuid в outgoing metadata — нужно для прямых gRPC-вызовов
-// в InventoryService, чей сервер требует metadata.session-uuid (auth-interceptor).
+// authCtx кладёт session-uuid в application context. Подключённый к inventoryClient
+// SessionForwarder преобразует его в outgoing gRPC metadata.
 func authCtx(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, "session-uuid", defaultSessionUUID)
+	return auth.WithSessionUUID(ctx, defaultSessionUUID)
 }
 
 // authCtxWith — то же, что authCtx, но с произвольной сессией. Используется
 // в тестах, где явно нужно проверить поведение interceptor'а с заданным значением.
 func authCtxWith(ctx context.Context, sessionUUID string) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, "session-uuid", sessionUUID)
+	return auth.WithSessionUUID(ctx, sessionUUID)
 }
 
 // registerAndLogin регистрирует нового пользователя и сразу логинится —
@@ -2453,7 +2478,7 @@ func TestAuthMiddleware_ExpiredSession(t *testing.T) {
 
 func TestInterceptor_NoMetadata(t *testing.T) {
 	// Прямой вызов без metadata — Unauthenticated
-	_, err := inventoryClient.GetPart(context.Background(), &inventoryv1.GetPartRequest{
+	_, err := inventoryRawClient.GetPart(context.Background(), &inventoryv1.GetPartRequest{
 		Uuid: HullAluminumUUID,
 	})
 	require.Error(t, err)
@@ -2461,8 +2486,8 @@ func TestInterceptor_NoMetadata(t *testing.T) {
 }
 
 func TestInterceptor_EmptySession(t *testing.T) {
-	ctx := authCtxWith(context.Background(), "")
-	_, err := inventoryClient.GetPart(ctx, &inventoryv1.GetPartRequest{
+	ctx := metadata.AppendToOutgoingContext(context.Background(), interceptor.SessionMetadataKey, "")
+	_, err := inventoryRawClient.GetPart(ctx, &inventoryv1.GetPartRequest{
 		Uuid: HullAluminumUUID,
 	})
 	require.Error(t, err)
@@ -2470,8 +2495,8 @@ func TestInterceptor_EmptySession(t *testing.T) {
 }
 
 func TestInterceptor_InvalidSession(t *testing.T) {
-	ctx := authCtxWith(context.Background(), uuid.New().String())
-	_, err := inventoryClient.GetPart(ctx, &inventoryv1.GetPartRequest{
+	ctx := metadata.AppendToOutgoingContext(context.Background(), interceptor.SessionMetadataKey, uuid.New().String())
+	_, err := inventoryRawClient.GetPart(ctx, &inventoryv1.GetPartRequest{
 		Uuid: HullAluminumUUID,
 	})
 	require.Error(t, err)

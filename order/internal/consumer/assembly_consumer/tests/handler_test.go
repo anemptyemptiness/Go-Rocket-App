@@ -12,7 +12,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	apimocks "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1/mocks"
 	shipassembledconsumer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/assembly_consumer"
 	consumermocks "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/assembly_consumer/mocks"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
@@ -194,10 +193,9 @@ func Test_ShipAssembled(t *testing.T) {
 
 			consumer := consumermocks.NewConsumer(t)
 			repo := svcmocks.NewOrderRepository(t)
-			orderSvc := apimocks.NewOrderService(t)
 			invClient := svcmocks.NewInventoryClient(t)
 
-			svc := shipassembledconsumer.New(consumer, orderSvc, repo, invClient)
+			svc := shipassembledconsumer.New(consumer, repo, invClient)
 
 			tc.setupMock(repo, invClient)
 

@@ -38,6 +38,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
@@ -192,7 +193,7 @@ func runMain(m *testing.M) int {
 
 	// 11. Order ShipAssembled-консьюмер — реальный код из internal/consumer/assembly_consumer.
 	// Слушает топик ShipAssembled и переводит заказ в ASSEMBLED через CommitParts
-	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, txManager, inventoryClient)
+	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, inventoryClient)
 
 	// 12. Реальный AssemblyService — тот же код, что в проде.
 	// Используется тот же код, что и в проде: consumer/order_paid → service/assembly →
@@ -423,7 +424,6 @@ func startOrderShipAssembledConsumer(
 	cleanups *cleanupStack,
 	broker string,
 	pool *pgxpool.Pool,
-	txManager *manager.Manager,
 	invClient inventoryv1.InventoryServiceClient,
 ) {
 	cg := mustNew(sarama.NewConsumerGroup([]string{broker}, orderGroupID, consumerConfig()))
@@ -443,11 +443,10 @@ func startOrderShipAssembledConsumer(
 	// Реальный код из order/internal/consumer/assembly_consumer.
 	// Репозиторий и inventory-клиент берём из тех же internal-пакетов,
 	// что использует прод-DI (order/internal/app/di.go)
-	svc := assemblyconsumer.NewService(
+	svc := assemblyconsumer.New(
 		wrappedConsumer,
-		orderRepoPkg.New(pool, txManager),
+		orderRepoPkg.New(pool),
 		inventoryClientPkg.New(invClient),
-		txManager,
 	)
 
 	go func() {

@@ -44,7 +44,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 	var order model.Order
 
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		listPartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		listPartsCtx, cancel := context.WithTimeout(txCtx, 5*time.Second)
 		defer cancel()
 
 		parts, err := s.inventoryClient.ListParts(listPartsCtx, req.PartUUIDs())
@@ -68,7 +68,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
-		userUUID, ok := auth.UserUUIDFromContext(ctx)
+		userUUID, ok := auth.UserUUIDFromContext(txCtx)
 		if !ok {
 			return pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
 		}
@@ -78,7 +78,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 		order.TotalPrice = totalPrice
 		order.Status = model.OrderStatusPendingPayment
 
-		validatePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		validatePartsCtx, cancel := context.WithTimeout(txCtx, 5*time.Second)
 		defer cancel()
 
 		err = s.inventoryClient.ValidateCompatibility(validatePartsCtx, req)
@@ -86,7 +86,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			return err
 		}
 
-		reservePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		reservePartsCtx, cancel := context.WithTimeout(txCtx, 5*time.Second)
 		defer cancel()
 
 		err = s.inventoryClient.ReserveParts(reservePartsCtx, req.PartUUIDs())
@@ -94,7 +94,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			return err
 		}
 
-		orderUUID, err := s.orderRepository.Create(ctx, order)
+		orderUUID, err := s.orderRepository.Create(txCtx, order)
 		if err != nil {
 			return pkgerr.Internal(fmt.Errorf("создать заказ: %w", err))
 		}
