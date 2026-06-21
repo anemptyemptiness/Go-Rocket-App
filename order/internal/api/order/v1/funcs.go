@@ -16,6 +16,7 @@ func (a *api) GetOrder(ctx context.Context, params orderv1.GetOrderParams) (orde
 		return pkgerr.MapHTTPError[orderv1.GetOrderRes](err,
 			pkgerr.WithNotFound[orderv1.GetOrderNotFound](),
 			pkgerr.WithInternal[orderv1.GetOrderInternalServerError](),
+			pkgerr.WithUnauthorized[orderv1.GetOrderUnauthorized](),
 		)
 	}
 
@@ -39,6 +40,7 @@ func (a *api) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) 
 			pkgerr.WithFailedPrecondition[orderv1.CreateOrderConflict](),
 			pkgerr.WithResourceExhausted[orderv1.CreateOrderConflict](),
 			pkgerr.WithInternal[orderv1.CreateOrderInternalServerError](),
+			pkgerr.WithUnauthorized[orderv1.CreateOrderUnauthorized](),
 		)
 	}
 
@@ -65,6 +67,7 @@ func (a *api) PayOrder(ctx context.Context, req *orderv1.PayOrderRequest, params
 			pkgerr.WithFailedPrecondition[orderv1.PayOrderConflict](),
 			pkgerr.WithResourceExhausted[orderv1.PayOrderConflict](),
 			pkgerr.WithInternal[orderv1.PayOrderInternalServerError](),
+			pkgerr.WithUnauthorized[orderv1.PayOrderUnauthorized](),
 		)
 	}
 
@@ -83,6 +86,7 @@ func (a *api) CancelOrder(ctx context.Context, params orderv1.CancelOrderParams)
 			pkgerr.WithFailedPrecondition[orderv1.CancelOrderConflict](),
 			pkgerr.WithResourceExhausted[orderv1.CancelOrderConflict](),
 			pkgerr.WithInternal[orderv1.CancelOrderInternalServerError](),
+			pkgerr.WithUnauthorized[orderv1.CancelOrderUnauthorized](),
 		)
 	}
 

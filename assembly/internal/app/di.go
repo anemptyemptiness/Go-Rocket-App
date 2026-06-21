@@ -106,6 +106,7 @@ func (d *diContainer) WrappedOrderPaidConsumer() *consumer.Consumer {
 			},
 			consumer.WithMiddlewares(
 				kafkamiddleware.ConsumerLogging(),
+				kafkamiddleware.ConsumerSession(),
 			),
 		)
 	}

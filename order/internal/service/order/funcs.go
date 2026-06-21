@@ -12,6 +12,7 @@ import (
 	errs "github.com/anemptyemptiness/Go-Rocket-App/order/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/input"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/auth"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 )
 
@@ -28,13 +29,6 @@ func (s *service) Get(ctx context.Context, orderUUID string) (model.Order, error
 }
 
 func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (model.Order, error) {
-	if req.HullUUID == "" || req.EngineUUID == "" {
-		return model.Order{}, pkgerr.InvalidArgument(errs.ErrHullUUIDAndEngineUUIDAreRequired)
-	}
-	if req.UserUUID == "" {
-		return model.Order{}, pkgerr.InvalidArgument(errs.ErrUserUUIDIsRequired)
-	}
-
 	seen := make(map[string]struct{})
 	for _, id := range req.PartUUIDs() {
 		if id == "" {
@@ -50,7 +44,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 	var order model.Order
 
 	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		listPartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		listPartsCtx, cancel := context.WithTimeout(txCtx, 5*time.Second)
 		defer cancel()
 
 		parts, err := s.inventoryClient.ListParts(listPartsCtx, req.PartUUIDs())
@@ -74,12 +68,17 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
-		order.UserUUID = req.UserUUID
+		userUUID, ok := auth.UserUUIDFromContext(txCtx)
+		if !ok {
+			return pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
+		}
+
+		order.UserUUID = userUUID.String()
 		order.Items = orderItems
 		order.TotalPrice = totalPrice
 		order.Status = model.OrderStatusPendingPayment
 
-		validatePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		validatePartsCtx, cancel := context.WithTimeout(txCtx, 5*time.Second)
 		defer cancel()
 
 		err = s.inventoryClient.ValidateCompatibility(validatePartsCtx, req)
@@ -87,7 +86,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			return err
 		}
 
-		reservePartsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		reservePartsCtx, cancel := context.WithTimeout(txCtx, 5*time.Second)
 		defer cancel()
 
 		err = s.inventoryClient.ReserveParts(reservePartsCtx, req.PartUUIDs())
@@ -95,7 +94,7 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			return err
 		}
 
-		orderUUID, err := s.orderRepository.Create(ctx, order)
+		orderUUID, err := s.orderRepository.Create(txCtx, order)
 		if err != nil {
 			return pkgerr.Internal(fmt.Errorf("создать заказ: %w", err))
 		}

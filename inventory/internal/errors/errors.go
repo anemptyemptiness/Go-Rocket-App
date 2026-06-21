@@ -18,4 +18,9 @@ var (
 	ErrIncompatibleParts              = errors.New("детали несовместимы")
 	ErrPartTypeMismatch               = errors.New("тип детали не соответствует слоту корабля")
 	ErrStockQuantityOrReservedIsEmpty = errors.New("stock_quantity или reserved пустой")
+
+	// AuthErrors.
+	ErrEmptyMetadata    = errors.New("отсутствует metadata")
+	ErrEmptySessionUUID = errors.New("отсутствует session-uuid")
+	ErrExpiredSession   = errors.New("недействительная сессия")
 )

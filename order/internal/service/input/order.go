@@ -5,7 +5,6 @@ import "github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 type CreateOrderRequest struct {
 	HullUUID   string
 	EngineUUID string
-	UserUUID   string
 	ShieldUUID *string
 	WeaponUUID *string
 }

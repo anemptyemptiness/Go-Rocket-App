@@ -15,18 +15,21 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	orderapi "github.com/anemptyemptiness/Go-Rocket-App/order/internal/api/order/v1"
+	iamclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/iam/v1"
 	inventoryclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/inventory/v1"
 	paymentclientv1 "github.com/anemptyemptiness/Go-Rocket-App/order/internal/client/grpc/payment/v1"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/config"
-	shipassembledconsumer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/ship_assembled"
-	orderpaidproducer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/producer/order_paid"
+	shipassembledconsumer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/consumer/assembly_consumer"
+	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/interceptor"
+	orderpaidproducer "github.com/anemptyemptiness/Go-Rocket-App/order/internal/producer/order_producer"
 	orderrepo "github.com/anemptyemptiness/Go-Rocket-App/order/internal/repository/order"
 	ordersvc "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/consumer"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/kafka/producer"
-	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/middleware/kafka"
+	kafkamiddleware "github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/middleware/kafka"
 	orderv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/openapi/order/v1"
+	authv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/auth/v1"
 	inventoryv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/inventory/v1"
 	paymentv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/payment/v1"
 )
@@ -43,6 +46,7 @@ type diContainer struct {
 	txManager       ordersvc.TxManager
 	paymentClient   ordersvc.PaymentClient
 	inventoryClient ordersvc.InventoryClient
+	iamClient       iamclientv1.Client
 	pool            *pgxpool.Pool
 
 	// Кафка: обёртки, продюсеры, консюмеры, сервисы.
@@ -118,7 +122,7 @@ func (d *diContainer) TxManager(ctx context.Context) ordersvc.TxManager {
 	return d.txManager
 }
 
-//nolint:dupl // Два разных gRPC-клиента с одинаковым шаблоном инициализации; намеренно оставлено явно.
+//nolint:dupl // Разные gRPC-клиенты с одинаковым шаблоном инициализации; намеренно оставлено явно.
 func (d *diContainer) PaymentClient(_ context.Context) ordersvc.PaymentClient {
 	if d.paymentClient == nil {
 		paymentConn, err := grpc.NewClient(config.AppConfig().GRPC.PaymentClient.Address(),
@@ -128,6 +132,9 @@ func (d *diContainer) PaymentClient(_ context.Context) ordersvc.PaymentClient {
 				Timeout:             keepAliveTimeout,
 				PermitWithoutStream: keepAlivePermitWithoutStream,
 			}),
+			grpc.WithChainUnaryInterceptor(
+				interceptor.SessionForwarder(),
+			),
 		)
 		if err != nil {
 			slog.Error("не удалось подключиться к PaymentService", "error", err)
@@ -153,7 +160,41 @@ func (d *diContainer) PaymentClient(_ context.Context) ordersvc.PaymentClient {
 	return d.paymentClient
 }
 
-//nolint:dupl // Два разных gRPC-клиента с одинаковым шаблоном инициализации; намеренно оставлено явно.
+func (d *diContainer) IAMClient(_ context.Context) iamclientv1.Client {
+	if d.iamClient == nil {
+		iamConn, err := grpc.NewClient(config.AppConfig().GRPC.IAMClient.Address(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:                keepAliveTime,
+				Timeout:             keepAliveTimeout,
+				PermitWithoutStream: keepAlivePermitWithoutStream,
+			}),
+		)
+		if err != nil {
+			slog.Error("не удалось подключиться к IAMClient", "error", err)
+			os.Exit(1)
+		}
+
+		closer.Add("iam GRPC Client", func(_ context.Context) error {
+			err = iamConn.Close()
+			if err != nil {
+				slog.Error("не удалось закрыть gRPC соединение iam client", "error", err)
+			} else {
+				slog.Info("соединение с IAMClient закрыто")
+			}
+			return nil
+		})
+
+		iamClientGRPC := authv1.NewAuthServiceClient(iamConn)
+		d.iamClient = iamclientv1.New(iamClientGRPC)
+
+		slog.Info("подключение к IAMClient установлено")
+	}
+
+	return d.iamClient
+}
+
+//nolint:dupl // Разные gRPC-клиенты с одинаковым шаблоном инициализации; намеренно оставлено явно.
 func (d *diContainer) InventoryClient(_ context.Context) ordersvc.InventoryClient {
 	if d.inventoryClient == nil {
 		inventoryConn, err := grpc.NewClient(config.AppConfig().GRPC.InventoryClient.Address(),
@@ -163,6 +204,9 @@ func (d *diContainer) InventoryClient(_ context.Context) ordersvc.InventoryClien
 				Timeout:             keepAliveTimeout,
 				PermitWithoutStream: keepAlivePermitWithoutStream,
 			}),
+			grpc.WithChainUnaryInterceptor(
+				interceptor.SessionForwarder(),
+			),
 		)
 		if err != nil {
 			slog.Error("не удалось подключиться к InventoryService", "error", err)
@@ -241,7 +285,10 @@ func (d *diContainer) WrappedShipAssembledConsumer(ctx context.Context) *consume
 			[]string{
 				config.AppConfig().ShipAssembledConsumer.Topic(),
 			},
-			consumer.WithMiddlewares(kafka.ConsumerLogging()),
+			consumer.WithMiddlewares(
+				kafkamiddleware.ConsumerLogging(),
+				kafkamiddleware.ConsumerSession(),
+			),
 		)
 	}
 
@@ -252,7 +299,6 @@ func (d *diContainer) ShipAssembledConsumer(ctx context.Context) ShipAssembledCo
 	if d.shipAssembledConsumer == nil {
 		d.shipAssembledConsumer = shipassembledconsumer.New(
 			d.WrappedShipAssembledConsumer(ctx),
-			d.OrderService(ctx),
 			d.OrderRepository(ctx),
 			d.InventoryClient(ctx),
 		)

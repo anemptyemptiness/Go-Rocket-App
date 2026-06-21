@@ -11,9 +11,10 @@ import (
 var appConfig *config
 
 type config struct {
-	GRPC   grpcConfig   `yaml:"grpc"`
-	Logger loggerConfig `yaml:"logger"`
-	PG     pgConfig     `yaml:"pg"`
+	GRPC      grpcConfig      `yaml:"grpc"`
+	Logger    loggerConfig    `yaml:"logger"`
+	PG        pgConfig        `yaml:"pg"`
+	IAMClient iamClientConfig `yaml:"iam_client"`
 }
 
 const defaultConfigPath = "config.local.yaml"

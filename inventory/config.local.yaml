@@ -12,3 +12,7 @@ pg:
 
 logger:
   level: "debug"
+
+iam_client:
+  host: "localhost"
+  port: "50053"

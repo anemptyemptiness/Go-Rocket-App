@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/config"
+	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/interceptor"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/grpc/health"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/logger"
@@ -103,7 +104,10 @@ func (a *App) initGRPCServer(ctx context.Context) {
 			MinTime:             keepAliveMinTime,
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
-		grpc.UnaryInterceptor(pkgerr.UnaryErrorInterceptor(slog.Default())),
+		grpc.ChainUnaryInterceptor(
+			pkgerr.UnaryErrorInterceptor(slog.Default()),
+			interceptor.UnaryAuthInterceptor(a.diContainer.IAMClient(ctx)),
+		),
 	)
 
 	api := a.diContainer.InventoryAPI(ctx)

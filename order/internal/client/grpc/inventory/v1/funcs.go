@@ -26,6 +26,8 @@ func (c *client) ListParts(ctx context.Context, uuids []string) ([]model.Part, e
 			return nil, pkgerr.InvalidArgument(err)
 		case codes.Internal:
 			return nil, pkgerr.Internal(err)
+		case codes.Unauthenticated:
+			return nil, pkgerr.Unauthenticated(err)
 		default:
 			return nil, pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
 		}
@@ -46,6 +48,8 @@ func (c *client) ValidateCompatibility(ctx context.Context, uuids input.CreateOr
 			return pkgerr.FailedPrecondition(err)
 		case codes.ResourceExhausted:
 			return pkgerr.ResourceExhausted(err)
+		case codes.Unauthenticated:
+			return pkgerr.Unauthenticated(err)
 		case codes.Internal:
 			return pkgerr.Internal(err)
 		default:
@@ -68,6 +72,8 @@ func (c *client) ReserveParts(ctx context.Context, uuids []string) error {
 			return pkgerr.FailedPrecondition(err)
 		case codes.ResourceExhausted:
 			return pkgerr.ResourceExhausted(err)
+		case codes.Unauthenticated:
+			return pkgerr.Unauthenticated(err)
 		case codes.Internal:
 			return pkgerr.Internal(err)
 		default:
@@ -90,6 +96,8 @@ func (c *client) ReleaseParts(ctx context.Context, uuids []string) error {
 			return pkgerr.FailedPrecondition(err)
 		case codes.ResourceExhausted:
 			return pkgerr.ResourceExhausted(err)
+		case codes.Unauthenticated:
+			return pkgerr.Unauthenticated(err)
 		case codes.Internal:
 			return pkgerr.Internal(err)
 		default:
@@ -112,6 +120,8 @@ func (c *client) CommitParts(ctx context.Context, uuids []string) error {
 			return pkgerr.FailedPrecondition(err)
 		case codes.ResourceExhausted:
 			return pkgerr.ResourceExhausted(err)
+		case codes.Unauthenticated:
+			return pkgerr.Unauthenticated(err)
 		case codes.Internal:
 			return pkgerr.Internal(err)
 		default:

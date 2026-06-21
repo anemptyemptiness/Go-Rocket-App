@@ -22,6 +22,8 @@ func (c *client) PayOrder(ctx context.Context, orderUUID string, method model.Pa
 		switch status.Code(err) {
 		case codes.InvalidArgument:
 			return "", pkgerr.InvalidArgument(err)
+		case codes.Unauthenticated:
+			return "", pkgerr.Unauthenticated(err)
 		default:
 			return "", pkgerr.Internal(fmt.Errorf("оплатить заказ: %w", err))
 		}
