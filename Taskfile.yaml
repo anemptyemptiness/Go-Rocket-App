@@ -391,3 +391,7 @@ tasks:
     dotenv: [ 'iam.env' ]
     cmds:
       - '{{.GOOSE}} -dir $MIGRATIONS_DIR postgres "$DB_URI" status'
+  build:
+    desc: "Собирает все Go-модули (go build)"
+    cmds:
+      - go build ./order/... ./inventory/... ./payment/... ./assembly/... ./iam/...
