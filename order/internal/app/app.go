@@ -4,16 +4,20 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/go-faster/errors"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/config"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/middleware"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/logger"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/metrics"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/tracing"
 )
 
 const (
@@ -101,6 +105,8 @@ func (a *App) initDeps(ctx context.Context) {
 	deps := []func(context.Context){
 		a.initDI,
 		a.initLogger,
+		a.initMetrics,
+		a.initTracing,
 		a.initHTTPServer,
 		a.initShipAssembledConsumer,
 	}
@@ -115,13 +121,62 @@ func (a *App) initDI(_ context.Context) {
 }
 
 func (a *App) initLogger(_ context.Context) {
-	logger.Init(config.AppConfig().Logger.Level)
+	logger.Init(logger.Config{
+		Level:             config.AppConfig().Logger.Level,
+		ServiceName:       config.AppConfig().OTel.ServiceName,
+		Environment:       config.AppConfig().OTel.Environment,
+		EnableOTLP:        config.AppConfig().OTel.EnableOTLP,
+		CollectorEndpoint: config.AppConfig().OTel.Endpoint,
+	})
+
+	closer.Add("logger", func(context.Context) error {
+		loggerCloseErr := logger.Close()
+		if loggerCloseErr != nil {
+			return loggerCloseErr
+		}
+		return nil
+	})
+}
+
+func (a *App) initMetrics(_ context.Context) {
+	metrics.Init(config.AppConfig().OTel.ServiceName)
+
+	closer.Add("metrics", func(context.Context) error {
+		metricsCloseErr := metrics.Close()
+		if metricsCloseErr != nil {
+			return metricsCloseErr
+		}
+		return nil
+	})
+}
+
+func (a *App) initTracing(ctx context.Context) {
+	shutdown, err := tracing.InitTracer(ctx, tracing.Config{
+		CollectorEndpoint: config.AppConfig().OTel.Endpoint,
+		ServiceName:       config.AppConfig().OTel.ServiceName,
+		Environment:       config.AppConfig().OTel.Environment,
+		ServiceVersion:    config.AppConfig().OTel.ServiceVersion,
+		SamplingRatio:     config.AppConfig().OTel.SamplingRatio,
+	})
+	if err != nil {
+		slog.Error("ошибка при инициализации трейсера", "error", err)
+		os.Exit(1)
+	}
+
+	closer.Add("tracing", func(closerCtx context.Context) error {
+		return shutdown(closerCtx)
+	})
 }
 
 func (a *App) initHTTPServer(ctx context.Context) {
+	// Оборачиваем хэндлер HTTP в auth-мидлвари.
+	handler := middleware.AuthMiddleware(a.diContainer.IAMClient(ctx))(a.diContainer.OrderServer(ctx))
+	// Оборачиваем хэндлер HTTP в tracing-мидлвари.
+	handler = otelhttp.NewHandler(handler, config.AppConfig().OTel.ServiceName)
+
 	a.httpServer = &http.Server{
 		Addr:              config.AppConfig().HTTP.Address(),
-		Handler:           middleware.AuthMiddleware(a.diContainer.IAMClient(ctx))(a.diContainer.OrderServer(ctx)),
+		Handler:           handler,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,

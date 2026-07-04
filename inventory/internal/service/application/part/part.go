@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 
@@ -15,16 +16,20 @@ import (
 
 func (s *service) GetPart(ctx context.Context, uuidStr string) (entity.Part, error) {
 	if uuidStr == "" {
+		slog.ErrorContext(ctx, "получение детали", slog.String("error", errs.ErrPartUUIDIsEmpty.Error()))
 		return entity.Part{}, pkgerr.InvalidArgument(errs.ErrPartUUIDIsEmpty)
 	}
 
 	partUuid, err := uuid.Parse(uuidStr)
 	if err != nil || partUuid == uuid.Nil {
+		slog.ErrorContext(ctx, "получение детали", slog.String("error", errs.ErrPartUUIDInvalid.Error()))
 		return entity.Part{}, pkgerr.InvalidArgument(errs.ErrPartUUIDInvalid)
 	}
 
 	part, err := s.inventoryRepo.GetPart(ctx, partUuid.String())
 	if err != nil {
+		slog.ErrorContext(ctx, "получение детали", slog.String("error", err.Error()))
+
 		if errors.Is(err, errs.ErrPartNotFound) {
 			return entity.Part{}, pkgerr.NotFound(err)
 		}
@@ -39,6 +44,7 @@ func (s *service) ListParts(ctx context.Context, filter input.PartFilter) ([]ent
 		for _, uuidCheck := range filter.UUIDs {
 			partUuid, err := uuid.Parse(uuidCheck)
 			if err != nil || partUuid == uuid.Nil {
+				slog.ErrorContext(ctx, "получение списка деталей", slog.String("error", errs.ErrPartUUIDInvalid.Error()))
 				return nil, pkgerr.InvalidArgument(errs.ErrPartUUIDInvalid)
 			}
 		}
@@ -46,6 +52,8 @@ func (s *service) ListParts(ctx context.Context, filter input.PartFilter) ([]ent
 
 	parts, err := s.inventoryRepo.ListParts(ctx, filter)
 	if err != nil {
+		slog.ErrorContext(ctx, "получение списка деталей", slog.String("error", err.Error()))
+
 		if errors.Is(err, errs.ErrPartNotFound) {
 			return nil, pkgerr.NotFound(err)
 		}
@@ -55,6 +63,7 @@ func (s *service) ListParts(ctx context.Context, filter input.PartFilter) ([]ent
 		return nil, pkgerr.Internal(fmt.Errorf("получить список деталей: %w", err))
 	}
 	if len(filter.UUIDs) > 0 && len(filter.UUIDs) != len(parts) {
+		slog.ErrorContext(ctx, "получение списка деталей", slog.String("error", errs.ErrPartNotFound.Error()))
 		return nil, pkgerr.NotFound(errs.ErrPartNotFound)
 	}
 
@@ -62,7 +71,7 @@ func (s *service) ListParts(ctx context.Context, filter input.PartFilter) ([]ent
 }
 
 func (s *service) CommitParts(ctx context.Context, req input.CommitPartsRequest) error {
-	return s.txManager.Do(ctx, func(txCtx context.Context) error {
+	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
 		filter := input.PartFilter{UUIDs: req.UUIDs}
 
 		parts, err := s.inventoryRepo.ListForUpdate(txCtx, filter)
@@ -95,4 +104,10 @@ func (s *service) CommitParts(ctx context.Context, req input.CommitPartsRequest)
 
 		return nil
 	})
+	if err != nil {
+		slog.ErrorContext(ctx, "подтверждение деталей", slog.String("error", err.Error()))
+		return err
+	}
+
+	return nil
 }

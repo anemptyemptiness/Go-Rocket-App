@@ -15,6 +15,7 @@ type config struct {
 	Logger    loggerConfig    `yaml:"logger"`
 	PG        pgConfig        `yaml:"pg"`
 	IAMClient iamClientConfig `yaml:"iam_client"`
+	OTel      otelConfig      `yaml:"otel"`
 }
 
 const defaultConfigPath = "config.local.yaml"

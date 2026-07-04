@@ -2,6 +2,7 @@ package order_producer
 
 import (
 	"context"
+	"log/slog"
 
 	"google.golang.org/protobuf/proto"
 
@@ -31,6 +32,7 @@ func (s *service) Produce(ctx context.Context, event model.OrderPaidEvent) error
 
 	payload, err := proto.Marshal(&msg)
 	if err != nil {
+		slog.ErrorContext(ctx, "продюсер order producer", slog.String("error", err.Error()))
 		return err
 	}
 
@@ -40,6 +42,7 @@ func (s *service) Produce(ctx context.Context, event model.OrderPaidEvent) error
 		Headers: kafkamiddleware.ProducerSessionHeaders(ctx),
 	})
 	if err != nil {
+		slog.ErrorContext(ctx, "продюсер order producer", slog.String("error", err.Error()))
 		return err
 	}
 

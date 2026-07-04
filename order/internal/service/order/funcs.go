@@ -17,8 +17,25 @@ import (
 )
 
 func (s *service) Get(ctx context.Context, orderUUID string) (model.Order, error) {
+	userUUID, ok := auth.UserUUIDFromContext(ctx)
+	if !ok {
+		slog.ErrorContext(ctx, "получение заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", errs.ErrEmptyUserUUID.Error()),
+		)
+
+		return model.Order{}, pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
+	}
+
 	order, err := s.orderRepository.Get(ctx, orderUUID)
 	if err != nil {
+		slog.ErrorContext(ctx, "получение заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", err.Error()),
+		)
+
 		if errors.Is(err, errs.ErrOrderNotFound) {
 			return model.Order{}, pkgerr.NotFound(err)
 		}
@@ -29,12 +46,31 @@ func (s *service) Get(ctx context.Context, orderUUID string) (model.Order, error
 }
 
 func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (model.Order, error) {
+	userUUID, ok := auth.UserUUIDFromContext(ctx)
+	if !ok {
+		slog.ErrorContext(ctx, "создание заказа",
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", errs.ErrEmptyUserUUID.Error()),
+		)
+		return model.Order{}, pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
+	}
+
 	seen := make(map[string]struct{})
 	for _, id := range req.PartUUIDs() {
 		if id == "" {
+			slog.ErrorContext(ctx, "создание заказа",
+				slog.String("order_uuid", id),
+				slog.String("error", errs.ErrInvalidPartUUID.Error()),
+			)
+
 			return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
 		}
 		if _, exists := seen[id]; exists {
+			slog.ErrorContext(ctx, "создание заказа",
+				slog.String("order_uuid", id),
+				slog.String("error", errs.ErrInvalidPartUUID.Error()),
+			)
+
 			return model.Order{}, pkgerr.InvalidArgument(errs.ErrInvalidPartUUID)
 		}
 
@@ -68,11 +104,6 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 			totalPrice += part.Price
 		}
 
-		userUUID, ok := auth.UserUUIDFromContext(txCtx)
-		if !ok {
-			return pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
-		}
-
 		order.UserUUID = userUUID.String()
 		order.Items = orderItems
 		order.TotalPrice = totalPrice
@@ -104,17 +135,33 @@ func (s *service) Create(ctx context.Context, req input.CreateOrderRequest) (mod
 		return nil
 	})
 	if err != nil {
+		slog.ErrorContext(ctx, "создание заказа", slog.String("error", err.Error()))
 		return model.Order{}, err
 	}
 
-	return order, err
+	ordersCreatedTotal.Add(ctx, 1)
+
+	return order, nil
 }
 
 func (s *service) Pay(ctx context.Context, orderUUID string, method model.PaymentMethod) (string, error) {
 	var transactionUUID string
 
-	err := s.txManager.Do(ctx, func(txCtx context.Context) error {
-		order, err := s.orderRepository.GetForUpdate(ctx, orderUUID)
+	userUUID, ok := auth.UserUUIDFromContext(ctx)
+	if !ok {
+		slog.ErrorContext(ctx, "оплата заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", errs.ErrEmptyUserUUID.Error()),
+		)
+		return "", pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
+	}
+
+	var order model.Order
+	var err error
+
+	err = s.txManager.Do(ctx, func(txCtx context.Context) error {
+		order, err = s.orderRepository.GetForUpdate(ctx, orderUUID)
 		if err != nil {
 			if errors.Is(err, errs.ErrOrderNotFound) {
 				return pkgerr.NotFound(err)
@@ -171,15 +218,40 @@ func (s *service) Pay(ctx context.Context, orderUUID string, method model.Paymen
 		return nil
 	})
 	if err != nil {
+		slog.ErrorContext(ctx, "оплата заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("payment_method", string(method)),
+			slog.String("error", err.Error()),
+		)
 		return "", err
 	}
+
+	ordersPaidTotal.Add(ctx, 1)
+	ordersRevenueTotal.Add(ctx, order.TotalPrice)
 
 	return transactionUUID, nil
 }
 
 func (s *service) Cancel(ctx context.Context, orderUUID string) error {
+	userUUID, ok := auth.UserUUIDFromContext(ctx)
+	if !ok {
+		slog.ErrorContext(ctx, "отмена заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", errs.ErrEmptyUserUUID.Error()),
+		)
+		return pkgerr.Unauthenticated(errs.ErrEmptyUserUUID)
+	}
+
 	order, err := s.orderRepository.GetForUpdate(ctx, orderUUID)
 	if err != nil {
+		slog.ErrorContext(ctx, "отмена заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", err.Error()),
+		)
+
 		if errors.Is(err, errs.ErrOrderNotFound) {
 			return pkgerr.NotFound(err)
 		}
@@ -188,10 +260,25 @@ func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 
 	switch order.Status {
 	case model.OrderStatusPaid:
+		slog.ErrorContext(ctx, "отмена заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", errs.ErrOrderAlreadyPaid.Error()),
+		)
 		return pkgerr.Conflict(errs.ErrOrderAlreadyPaid)
 	case model.OrderStatusCancelled:
+		slog.ErrorContext(ctx, "отмена заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", errs.ErrOrderAlreadyCancelled.Error()),
+		)
 		return pkgerr.Conflict(errs.ErrOrderAlreadyCancelled)
 	case model.OrderStatusAssembled:
+		slog.ErrorContext(ctx, "отмена заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", errs.ErrOrderAssembled.Error()),
+		)
 		return pkgerr.Conflict(errs.ErrOrderAssembled)
 	}
 
@@ -206,6 +293,11 @@ func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 	// На будущее: здесь возможно реализовать паттерн SAGA, чтобы отменить ReleaseParts в grpc-inventory.
 	err = s.inventoryClient.ReleaseParts(releasePartsCtx, uuids)
 	if err != nil {
+		slog.ErrorContext(ctx, "отмена заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", err.Error()),
+		)
 		return err
 	}
 
@@ -213,6 +305,12 @@ func (s *service) Cancel(ctx context.Context, orderUUID string) error {
 
 	err = s.orderRepository.Update(ctx, order)
 	if err != nil {
+		slog.ErrorContext(ctx, "отмена заказа",
+			slog.String("order_uuid", orderUUID),
+			slog.String("user_uuid", userUUID.String()),
+			slog.String("error", err.Error()),
+		)
+
 		if errors.Is(err, errs.ErrOrderNotFound) {
 			return pkgerr.NotFound(err)
 		}

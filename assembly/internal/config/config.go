@@ -16,6 +16,7 @@ type config struct {
 	Logger                loggerConfig                `yaml:"logger"`
 	OrderPaidConsumer     orderPaidConsumerConfig     `yaml:"order_paid_consumer"`
 	ShipAssembledProducer shipAssembledProducerConfig `yaml:"ship_assembled_producer"`
+	OTel                  otelConfig                  `yaml:"otel"`
 }
 
 const defaultConfigPath = "config.local.yaml"

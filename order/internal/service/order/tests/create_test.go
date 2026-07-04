@@ -151,7 +151,10 @@ func TestCreate_PartNotFound(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = uuid.New()
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := svcmocks.NewOrderRepository(t)
 	paymentClient := svcmocks.NewPaymentClient(t)
@@ -188,7 +191,10 @@ func TestCreate_PartIsOver(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = uuid.New()
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := svcmocks.NewOrderRepository(t)
 	paymentClient := svcmocks.NewPaymentClient(t)
@@ -473,8 +479,11 @@ func TestCreate_PartUUIDInvalid(t *testing.T) {
 		ctx        = context.Background()
 		hullUUID   = gofakeit.UUID()
 		engineUUID = gofakeit.UUID()
+		userUUID   = uuid.New()
 		weaponUUID = ""
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := svcmocks.NewOrderRepository(t)
 	paymentClient := svcmocks.NewPaymentClient(t)
