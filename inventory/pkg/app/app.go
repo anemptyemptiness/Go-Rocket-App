@@ -31,6 +31,7 @@ func RegisterServices(grpcServer *grpc.Server, pool *pgxpool.Pool) {
 	compChecker := domainpartsvc.New()
 	svc := applicationpartsvc.New(repo, compChecker, txManager)
 	api := inventoryapi.New(svc)
+
 	inventoryv1.RegisterInventoryServiceServer(grpcServer, api)
 }
 

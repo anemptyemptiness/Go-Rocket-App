@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	errs "github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/errors"
 	"github.com/anemptyemptiness/Go-Rocket-App/inventory/internal/model/entity"
@@ -15,21 +16,25 @@ import (
 func (s *service) ValidateCompatibility(ctx context.Context, req input.ValidateCompatibilityRequest) error {
 	err := s.validateCompatibility(ctx, req)
 	if err != nil {
+		slog.Error("проверка совместимости", slog.String("error", err.Error()))
 		return err
 	}
 
 	parts, err := s.ListParts(ctx, input.PartFilter{UUIDs: req.UUIDs()})
 	if err != nil {
+		slog.Error("проверка совместимости", slog.String("error", err.Error()))
 		return err
 	}
 
 	err = s.resolveShipSlots(ctx, parts, req)
 	if err != nil {
+		slog.Error("проверка совместимости", slog.String("error", err.Error()))
 		return err
 	}
 
 	err = s.compatibilityChecker.Check(parts)
 	if err != nil {
+		slog.Error("проверка совместимости", slog.String("error", err.Error()))
 		return err
 	}
 

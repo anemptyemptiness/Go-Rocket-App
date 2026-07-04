@@ -17,6 +17,7 @@ type config struct {
 	Redis      redisConfig      `yaml:"redis"`
 	Session    sessionConfig    `yaml:"session"`
 	Encryption encryptionConfig `yaml:"encryption"`
+	OTel       otelConfig       `yaml:"otel"`
 }
 
 const defaultConfigPath = "config.local.yaml"

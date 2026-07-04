@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log/slog"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -10,6 +11,8 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/assembly/internal/config"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/logger"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/metrics"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/tracing"
 )
 
 const (
@@ -65,6 +68,8 @@ func (a *App) initDeps(ctx context.Context) {
 	inits := []func(context.Context){
 		a.initDI,
 		a.initLogger,
+		a.initMetrics,
+		a.initTracing,
 	}
 
 	for _, f := range inits {
@@ -77,7 +82,51 @@ func (a *App) initDI(_ context.Context) {
 }
 
 func (a *App) initLogger(_ context.Context) {
-	logger.Init(config.AppConfig().Logger.Level)
+	logger.Init(logger.Config{
+		Level:             config.AppConfig().Logger.Level,
+		ServiceName:       config.AppConfig().OTel.ServiceName,
+		Environment:       config.AppConfig().OTel.Environment,
+		EnableOTLP:        config.AppConfig().OTel.EnableOTLP,
+		CollectorEndpoint: config.AppConfig().OTel.Endpoint,
+	})
+
+	closer.Add("logger", func(context.Context) error {
+		loggerCloseErr := logger.Close()
+		if loggerCloseErr != nil {
+			return loggerCloseErr
+		}
+		return nil
+	})
+}
+
+func (a *App) initMetrics(_ context.Context) {
+	metrics.Init(config.AppConfig().OTel.ServiceName)
+
+	closer.Add("metrics", func(context.Context) error {
+		metricsCloseErr := metrics.Close()
+		if metricsCloseErr != nil {
+			return metricsCloseErr
+		}
+		return nil
+	})
+}
+
+func (a *App) initTracing(ctx context.Context) {
+	shutdown, err := tracing.InitTracer(ctx, tracing.Config{
+		CollectorEndpoint: config.AppConfig().OTel.Endpoint,
+		ServiceName:       config.AppConfig().OTel.ServiceName,
+		Environment:       config.AppConfig().OTel.Environment,
+		ServiceVersion:    config.AppConfig().OTel.ServiceVersion,
+		SamplingRatio:     config.AppConfig().OTel.SamplingRatio,
+	})
+	if err != nil {
+		slog.Error("ошибка при инициализации трейсера", "error", err)
+		os.Exit(1)
+	}
+
+	closer.Add("tracing", func(closerCtx context.Context) error {
+		return shutdown(closerCtx)
+	})
 }
 
 func (a *App) runConsumer(ctx context.Context) error {

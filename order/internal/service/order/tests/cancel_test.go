@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/auth"
 )
 
 func TestCancel_Success(t *testing.T) {
@@ -22,8 +24,11 @@ func TestCancel_Success(t *testing.T) {
 		ctx       = context.Background()
 		orderUUID = gofakeit.UUID()
 		partUUID  = gofakeit.UUID()
+		userUUID  = uuid.New()
 		status    = model.OrderStatusPendingPayment
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
@@ -64,7 +69,10 @@ func TestCancel_NotFound(t *testing.T) {
 	var (
 		ctx       = context.Background()
 		orderUUID = gofakeit.UUID()
+		userUUID  = uuid.New()
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
@@ -89,8 +97,11 @@ func TestCancel_AlreadyPaid(t *testing.T) {
 	var (
 		ctx       = context.Background()
 		orderUUID = gofakeit.UUID()
+		userUUID  = uuid.New()
 		status    = model.OrderStatusPaid
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
@@ -118,8 +129,11 @@ func TestCancel_AlreadyCancelled(t *testing.T) {
 	var (
 		ctx       = context.Background()
 		orderUUID = gofakeit.UUID()
+		userUUID  = uuid.New()
 		status    = model.OrderStatusCancelled
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
@@ -148,8 +162,11 @@ func TestCancel_ReleasePartsError(t *testing.T) {
 		ctx           = context.Background()
 		orderUUID     = gofakeit.UUID()
 		partUUID      = gofakeit.UUID()
+		userUUID      = uuid.New()
 		unexpectedErr = assert.AnError
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
@@ -187,8 +204,11 @@ func TestCancel_UpdateError(t *testing.T) {
 		ctx           = context.Background()
 		orderUUID     = gofakeit.UUID()
 		partUUID      = gofakeit.UUID()
+		userUUID      = uuid.New()
 		unexpectedErr = assert.AnError
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)

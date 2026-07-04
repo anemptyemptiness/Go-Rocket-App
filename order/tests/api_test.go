@@ -51,12 +51,6 @@ import (
 	userv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/user/v1"
 )
 
-type noopOrderPaidProducer struct{}
-
-func (noopOrderPaidProducer) Produce(context.Context, model.OrderPaidEvent) error {
-	return nil
-}
-
 // Предзагруженные UUID и цены деталей (из migrations/inventory/00002_seed_parts.sql)
 const (
 	HullAluminumUUID   = "550e8400-e29b-41d4-a716-446655440001" // 500000 kopecks (5000 RUB)
@@ -79,13 +73,19 @@ const (
 
 const bufSize = 1024 * 1024
 
+type noopOrderPaidProducer struct{}
+
+func (noopOrderPaidProducer) Produce(context.Context, model.OrderPaidEvent) error {
+	return nil
+}
+
 var (
 	invLis *bufconn.Listener
 	payLis *bufconn.Listener
 	iamLis *bufconn.Listener
 
 	inventoryClient    inventoryv1.InventoryServiceClient
-	inventoryRawClient inventoryv1.InventoryServiceClient
+	rawInventoryClient inventoryv1.InventoryServiceClient
 	paymentClient      paymentv1.PaymentServiceClient
 	userClient         userv1.UserServiceClient
 	authSvcClient      authv1.AuthServiceClient
@@ -317,9 +317,7 @@ func TestMain(m *testing.M) {
 	}
 	inventoryClient = inventoryv1.NewInventoryServiceClient(invConn)
 
-	// Raw-клиент нужен только для тестов серверного auth-interceptor. Если подключить
-	// SessionForwarder, запрос без сессии будет отклонён на клиенте и до сервера не дойдёт.
-	invRawConn, err := grpc.NewClient(
+	rawInvConn, err := grpc.NewClient(
 		"passthrough:///bufnet",
 		grpc.WithContextDialer(invBufDialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -327,7 +325,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	inventoryRawClient = inventoryv1.NewInventoryServiceClient(invRawConn)
+	rawInventoryClient = inventoryv1.NewInventoryServiceClient(rawInvConn)
 
 	// 11. Payment gRPC через bufconn (без auth)
 	payLis = bufconn.Listen(bufSize)
@@ -350,7 +348,14 @@ func TestMain(m *testing.M) {
 	paymentClient = paymentv1.NewPaymentServiceClient(payConn)
 
 	// 12. Order HTTP через httptest, с реальным IAM-клиентом для middleware
-	orderServer, err := app.NewHTTPHandlerWithProducer(orderPool, txManager, inventoryClient, paymentClient, authSvcClient, noopOrderPaidProducer{})
+	orderServer, err := app.NewHTTPHandlerWithProducer(
+		orderPool,
+		txManager,
+		inventoryClient,
+		paymentClient,
+		authSvcClient,
+		noopOrderPaidProducer{},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -370,7 +375,7 @@ func TestMain(m *testing.M) {
 	if err = invConn.Close(); err != nil {
 		panic(err)
 	}
-	if err = invRawConn.Close(); err != nil {
+	if err = rawInvConn.Close(); err != nil {
 		panic(err)
 	}
 	if err = payConn.Close(); err != nil {
@@ -404,14 +409,13 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// authCtx кладёт session-uuid в application context. Подключённый к inventoryClient
-// SessionForwarder преобразует его в outgoing gRPC metadata.
+// authCtx добавляет session UUID в контекст, откуда SessionForwarder переносит его
+// в outgoing metadata для защищённых вызовов InventoryService.
 func authCtx(ctx context.Context) context.Context {
 	return auth.WithSessionUUID(ctx, defaultSessionUUID)
 }
 
-// authCtxWith — то же, что authCtx, но с произвольной сессией. Используется
-// в тестах, где явно нужно проверить поведение interceptor'а с заданным значением.
+// authCtxWith — то же, что authCtx, но с произвольной сессией.
 func authCtxWith(ctx context.Context, sessionUUID string) context.Context {
 	return auth.WithSessionUUID(ctx, sessionUUID)
 }
@@ -2478,7 +2482,7 @@ func TestAuthMiddleware_ExpiredSession(t *testing.T) {
 
 func TestInterceptor_NoMetadata(t *testing.T) {
 	// Прямой вызов без metadata — Unauthenticated
-	_, err := inventoryRawClient.GetPart(context.Background(), &inventoryv1.GetPartRequest{
+	_, err := rawInventoryClient.GetPart(context.Background(), &inventoryv1.GetPartRequest{
 		Uuid: HullAluminumUUID,
 	})
 	require.Error(t, err)
@@ -2487,7 +2491,7 @@ func TestInterceptor_NoMetadata(t *testing.T) {
 
 func TestInterceptor_EmptySession(t *testing.T) {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), interceptor.SessionMetadataKey, "")
-	_, err := inventoryRawClient.GetPart(ctx, &inventoryv1.GetPartRequest{
+	_, err := rawInventoryClient.GetPart(ctx, &inventoryv1.GetPartRequest{
 		Uuid: HullAluminumUUID,
 	})
 	require.Error(t, err)
@@ -2495,8 +2499,12 @@ func TestInterceptor_EmptySession(t *testing.T) {
 }
 
 func TestInterceptor_InvalidSession(t *testing.T) {
-	ctx := metadata.AppendToOutgoingContext(context.Background(), interceptor.SessionMetadataKey, uuid.New().String())
-	_, err := inventoryRawClient.GetPart(ctx, &inventoryv1.GetPartRequest{
+	ctx := metadata.AppendToOutgoingContext(
+		context.Background(),
+		interceptor.SessionMetadataKey,
+		uuid.New().String(),
+	)
+	_, err := rawInventoryClient.GetPart(ctx, &inventoryv1.GetPartRequest{
 		Uuid: HullAluminumUUID,
 	})
 	require.Error(t, err)

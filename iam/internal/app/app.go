@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
@@ -17,6 +18,8 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/closer"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/grpc/health"
 	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/logger"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/metrics"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/tracing"
 	pkgerr "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/errors"
 	authv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/auth/v1"
 	userv1 "github.com/anemptyemptiness/Go-Rocket-App/shared/pkg/proto/user/v1"
@@ -62,6 +65,8 @@ func (a *App) initDeps(ctx context.Context) {
 	inits := []func(context.Context){
 		a.initDI,
 		a.initLogger,
+		a.initMetrics,
+		a.initTracing,
 		a.initListener,
 		a.initGRPCServer,
 	}
@@ -75,8 +80,52 @@ func (a *App) initDI(ctx context.Context) {
 	a.diContainer = &diContainer{}
 }
 
-func (a *App) initLogger(ctx context.Context) {
-	logger.Init(config.AppConfig().Logger.Level)
+func (a *App) initLogger(_ context.Context) {
+	logger.Init(logger.Config{
+		Level:             config.AppConfig().Logger.Level,
+		ServiceName:       config.AppConfig().OTel.ServiceName,
+		Environment:       config.AppConfig().OTel.Environment,
+		EnableOTLP:        config.AppConfig().OTel.EnableOTLP,
+		CollectorEndpoint: config.AppConfig().OTel.Endpoint,
+	})
+
+	closer.Add("logger", func(context.Context) error {
+		loggerCloseErr := logger.Close()
+		if loggerCloseErr != nil {
+			return loggerCloseErr
+		}
+		return nil
+	})
+}
+
+func (a *App) initMetrics(_ context.Context) {
+	metrics.Init(config.AppConfig().OTel.ServiceName)
+
+	closer.Add("metrics", func(context.Context) error {
+		metricsCloseErr := metrics.Close()
+		if metricsCloseErr != nil {
+			return metricsCloseErr
+		}
+		return nil
+	})
+}
+
+func (a *App) initTracing(ctx context.Context) {
+	shutdown, err := tracing.InitTracer(ctx, tracing.Config{
+		CollectorEndpoint: config.AppConfig().OTel.Endpoint,
+		ServiceName:       config.AppConfig().OTel.ServiceName,
+		Environment:       config.AppConfig().OTel.Environment,
+		ServiceVersion:    config.AppConfig().OTel.ServiceVersion,
+		SamplingRatio:     config.AppConfig().OTel.SamplingRatio,
+	})
+	if err != nil {
+		slog.Error("ошибка при инициализации трейсера", "error", err)
+		os.Exit(1)
+	}
+
+	closer.Add("tracing", func(closerCtx context.Context) error {
+		return shutdown(closerCtx)
+	})
 }
 
 func (a *App) initListener(ctx context.Context) {
@@ -105,6 +154,7 @@ func (a *App) initGRPCServer(ctx context.Context) {
 			PermitWithoutStream: keepAlivePermitWithoutStream,
 		}),
 		grpc.UnaryInterceptor(pkgerr.UnaryErrorInterceptor(slog.Default())),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 	)
 
 	userAPI := a.diContainer.UserAPI(ctx)

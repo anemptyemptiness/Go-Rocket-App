@@ -13,6 +13,7 @@ var appConfig *config
 type config struct {
 	GRPC   grpcConfig   `yaml:"grpc"`
 	Logger loggerConfig `yaml:"logger"`
+	OTel   otelConfig   `yaml:"otel"`
 }
 
 const defaultConfigPath = "config.local.yaml"

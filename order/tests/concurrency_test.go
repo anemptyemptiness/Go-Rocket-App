@@ -4,7 +4,6 @@ package tests
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -56,7 +55,6 @@ func TestConcurrent_CreateOrder_LastUnit_ExactlyOneSucceeds(t *testing.T) {
 		wg       sync.WaitGroup
 		mu       sync.Mutex
 		statuses []int
-		bodies   []string
 	)
 	wg.Add(2)
 	for range 2 {
@@ -68,11 +66,9 @@ func TestConcurrent_CreateOrder_LastUnit_ExactlyOneSucceeds(t *testing.T) {
 				EngineUUID: engineUUID,
 			})
 			defer func() { _ = resp.Body.Close() }()
-			body, _ := io.ReadAll(resp.Body)
 			mu.Lock()
 			defer mu.Unlock()
 			statuses = append(statuses, resp.StatusCode)
-			bodies = append(bodies, string(body))
 		}()
 	}
 	wg.Wait()
@@ -87,8 +83,8 @@ func TestConcurrent_CreateOrder_LastUnit_ExactlyOneSucceeds(t *testing.T) {
 			conflict++
 		}
 	}
-	assert.Equal(t, 1, created, "должен создаться ровно один заказ (statuses=%v, bodies=%v)", statuses, bodies)
-	assert.Equal(t, 1, conflict, "второй создаваемый заказ должен получить Conflict (statuses=%v, bodies=%v)", statuses, bodies)
+	assert.Equal(t, 1, created, "должен создаться ровно один заказ (statuses=%v)", statuses)
+	assert.Equal(t, 1, conflict, "второй создаваемый заказ должен получить Conflict (statuses=%v)", statuses)
 }
 
 // TestConcurrent_Reserve_MixedStock: гонка ReserveParts с батчем из двух

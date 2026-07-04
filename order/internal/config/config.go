@@ -18,6 +18,7 @@ type config struct {
 	Kafka                 kafkaConfig           `yaml:"kafka"`
 	OrderPaidProducer     orderPaidProducer     `yaml:"order_paid_producer"`
 	ShipAssembledConsumer shipAssembledConsumer `yaml:"ship_assembled_consumer"`
+	OTel                  otelConfig            `yaml:"otel"`
 }
 
 const defaultConfigPath = "config.local.yaml"

@@ -193,7 +193,7 @@ func runMain(m *testing.M) int {
 
 	// 11. Order ShipAssembled-консьюмер — реальный код из internal/consumer/assembly_consumer.
 	// Слушает топик ShipAssembled и переводит заказ в ASSEMBLED через CommitParts
-	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, inventoryClient)
+	startOrderShipAssembledConsumer(ctx, cleanups, broker, orderPool, txManager, inventoryClient)
 
 	// 12. Реальный AssemblyService — тот же код, что в проде.
 	// Используется тот же код, что и в проде: consumer/order_paid → service/assembly →
@@ -424,6 +424,7 @@ func startOrderShipAssembledConsumer(
 	cleanups *cleanupStack,
 	broker string,
 	pool *pgxpool.Pool,
+	txManager *manager.Manager,
 	invClient inventoryv1.InventoryServiceClient,
 ) {
 	cg := mustNew(sarama.NewConsumerGroup([]string{broker}, orderGroupID, consumerConfig()))

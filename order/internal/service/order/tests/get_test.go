@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/model"
 	orderservice "github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order"
 	"github.com/anemptyemptiness/Go-Rocket-App/order/internal/service/order/mocks"
+	"github.com/anemptyemptiness/Go-Rocket-App/platform/pkg/auth"
 )
 
 func TestGet_Success(t *testing.T) {
@@ -21,7 +23,10 @@ func TestGet_Success(t *testing.T) {
 	var (
 		ctx       = context.Background()
 		orderUUID = gofakeit.UUID()
+		userUUID  = uuid.New()
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
@@ -65,7 +70,10 @@ func TestGet_NotFound(t *testing.T) {
 	var (
 		ctx       = context.Background()
 		orderUUID = gofakeit.UUID()
+		userUUID  = uuid.New()
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
@@ -91,8 +99,11 @@ func TestGet_RepoError(t *testing.T) {
 	var (
 		ctx           = context.Background()
 		orderUUID     = gofakeit.UUID()
+		userUUID      = uuid.New()
 		unexpectedErr = assert.AnError
 	)
+
+	ctx = auth.WithUserUUID(ctx, userUUID)
 
 	repo := mocks.NewOrderRepository(t)
 	inventoryClient := mocks.NewInventoryClient(t)
